@@ -368,84 +368,7 @@ export const ProductManagement: React.FC = () => {
                 />
               </div>
 
-              {/* Ficha Técnica de Ingredientes */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-purple-500/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                      <Layers className="w-4 h-4 text-purple-400" />
-                      <span>Ficha Técnica do Produto (Baixa de Estoque)</span>
-                    </h4>
-                    <p className="text-[11px] text-slate-700">
-                      O estoque desses insumos será deduzido automaticamente a cada venda entregue!
-                    </p>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-                    Custo Calculado: R$ {calcRecipeCost(recipe).toFixed(2)}
-                  </span>
-                </div>
 
-                {/* Add ingredient to recipe */}
-                <div className="flex gap-2 items-center">
-                  <select
-                    value={selectedIngId}
-                    onChange={(e) => setSelectedIngId(e.target.value)}
-                    className="flex-1 bg-white border border-slate-200 rounded-xl p-2 text-slate-900"
-                  >
-                    {ingredients.map(ing => (
-                      <option key={ing.id} value={ing.id}>
-                        {ing.name} (R$ {ing.costPerUnit.toFixed(2)} / {ing.unit})
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Qtd"
-                    value={selectedIngQty}
-                    onChange={(e) => setSelectedIngQty(quantityMask(e.target.value))}
-                    className="w-20 bg-white border border-slate-200 rounded-xl p-2 text-slate-900 font-bold"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleAddRecipeItem}
-                    className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-slate-900 font-bold rounded-xl transition cursor-pointer"
-                  >
-                    + Adicionar
-                  </button>
-                </div>
-
-                {/* List of mapped recipe items */}
-                <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
-                  {recipe.length === 0 ? (
-                    <p className="text-slate-600 text-[11px] italic py-2 text-center">Nenhum insumo associado ainda. Adicione acima para automatizar o estoque.</p>
-                  ) : (
-                    recipe.map((item) => {
-                      const ing = ingredients.find(i => i.id === item.ingredientId);
-                      if (!ing) return null;
-                      const cost = item.quantity * ing.costPerUnit;
-                      return (
-                        <div key={item.ingredientId} className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/80">
-                          <span className="font-bold text-slate-900">{ing.name}</span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-amber-400 font-semibold">{item.quantity} {ing.unit}</span>
-                            <span className="text-slate-700">(R$ {cost.toFixed(2)})</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveRecipeItem(item.ingredientId)}
-                              className="text-red-400 hover:text-red-300 cursor-pointer p-1"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
@@ -481,7 +404,7 @@ export const ProductManagement: React.FC = () => {
                   onClick={() => setIsAddingCategory(true)}
                   className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-lg transition cursor-pointer border border-blue-200"
                 >
-                  Criar categoria
+                  Criar novo
                 </button>
               </div>
               <button onClick={() => setShowCategoriesModal(false)} className="text-slate-400 hover:text-slate-600 transition font-bold text-lg cursor-pointer">✕</button>
