@@ -227,10 +227,10 @@ export const ProductManagement: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(prod)}
-                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-purple-600 transition cursor-pointer border border-transparent hover:border-purple-200"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-purple-600 transition cursor-pointer border border-transparent hover:border-purple-200"
                         title="Editar"
                       >
-                        <Edit3 className="w-5 h-5" />
+                        <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => {
@@ -238,10 +238,10 @@ export const ProductManagement: React.FC = () => {
                             deleteProduct(prod.id);
                           }
                         }}
-                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition cursor-pointer border border-transparent hover:border-red-200"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition cursor-pointer border border-transparent hover:border-red-200"
                         title="Excluir"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
