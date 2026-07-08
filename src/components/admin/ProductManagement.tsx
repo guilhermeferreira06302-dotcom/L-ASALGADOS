@@ -206,7 +206,6 @@ export const ProductManagement: React.FC = () => {
                 <div className="text-xs">
                   <span className="text-slate-600">Custo: R$ {prod.costPrice.toFixed(2)}</span>
                   <span className="text-emerald-400 font-bold ml-2">({margin}% margem)</span>
-                  <p className="text-[10px] text-slate-600 mt-0.5">⏱️ {prod.prepTimeMin} min de preparo</p>
                 </div>
 
                 <div className="flex items-center gap-1.5">
