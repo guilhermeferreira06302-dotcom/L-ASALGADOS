@@ -33,9 +33,7 @@ export const ProductManagement: React.FC = () => {
   const [prepTimeMin, setPrepTimeMin] = useState('10');
   const [minStock, setMinStock] = useState('0,000');
   const [maxStock, setMaxStock] = useState('0,000');
-  const [recipe, setRecipe] = useState<RecipeItem[]>([]);
-  const [selectedIngId, setSelectedIngId] = useState(ingredients[0]?.id || '');
-  const [selectedIngQty, setSelectedIngQty] = useState('1');
+  const [manualCosts, setManualCosts] = useState<{ id: string, name: string, value: string }[]>([]);
 
   const openAddModal = () => {
     setEditingProd(null);
@@ -48,7 +46,7 @@ export const ProductManagement: React.FC = () => {
     setPrepTimeMin('10');
     setMinStock('0,000');
     setMaxStock('0,000');
-    setRecipe([]);
+    setManualCosts([]);
     setShowModal(true);
   };
 
@@ -63,40 +61,15 @@ export const ProductManagement: React.FC = () => {
     setPrepTimeMin(prod.prepTimeMin.toString());
     setMinStock(prod.minStock !== undefined ? quantityMask(prod.minStock) : '0,000');
     setMaxStock(prod.maxStock !== undefined ? quantityMask(prod.maxStock) : '0,000');
-    setRecipe(prod.recipe || []);
+    setManualCosts(prod.costPrice > 0 ? [{ id: Date.now().toString(), name: 'Custo Principal', value: currencyMask(prod.costPrice.toFixed(2)) }] : []);
     setShowModal(true);
-  };
-
-  const calcRecipeCost = (recItems: RecipeItem[]): number => {
-    return recItems.reduce((acc, item) => {
-      const ing = ingredients.find(i => i.id === item.ingredientId);
-      if (!ing) return acc;
-      return acc + (item.quantity * ing.costPerUnit);
-    }, 0);
-  };
-
-  const handleAddRecipeItem = () => {
-    if (!selectedIngId || !selectedIngQty) return;
-    const qty = parseQuantity(selectedIngQty) || 1;
-    const existingIdx = recipe.findIndex(r => r.ingredientId === selectedIngId);
-    if (existingIdx >= 0) {
-      const updated = [...recipe];
-      updated[existingIdx].quantity += qty;
-      setRecipe(updated);
-    } else {
-      setRecipe([...recipe, { ingredientId: selectedIngId, quantity: qty }]);
-    }
-  };
-
-  const handleRemoveRecipeItem = (ingId: string) => {
-    setRecipe(recipe.filter(r => r.ingredientId !== ingId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price) return;
     
-    const costPrice = calcRecipeCost(recipe);
+    const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
     const finalCategory = category;
 
     if (finalCategory) {
@@ -107,12 +80,12 @@ export const ProductManagement: React.FC = () => {
       name,
       category: finalCategory,
       price: parseCurrency(price),
-      costPrice: costPrice > 0 ? costPrice : (parseCurrency(price) * 0.35),
+      costPrice: totalCost,
       image: image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80',
       available: true,
       description: description || 'Sem descrição cadastrada.',
       prepTimeMin: parseInt(prepTimeMin) || 10,
-      recipe,
+      recipe: [],
       minStock: parseQuantity(minStock) || 0,
       maxStock: parseQuantity(maxStock) || 0,
       salesCountMonthly: editingProd ? editingProd.salesCountMonthly : 45
@@ -368,7 +341,88 @@ export const ProductManagement: React.FC = () => {
                 />
               </div>
 
+              {/* Custos e Lucro do Produto */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-emerald-500" />
+                    <span>Custos e Lucro do Produto</span>
+                  </h4>
+                </div>
 
+                <div className="space-y-2">
+                  {manualCosts.map((cost, idx) => (
+                    <div key={cost.id} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Ex: Pão / Embalagem"
+                        value={cost.name}
+                        onChange={(e) => {
+                          const newCosts = [...manualCosts];
+                          newCosts[idx].name = e.target.value;
+                          setManualCosts(newCosts);
+                        }}
+                        className="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 text-sm"
+                      />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="R$ 0,00"
+                        value={cost.value}
+                        onChange={(e) => {
+                          const newCosts = [...manualCosts];
+                          newCosts[idx].value = currencyMask(e.target.value);
+                          setManualCosts(newCosts);
+                        }}
+                        className="w-28 bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 font-bold text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setManualCosts(manualCosts.filter(c => c.id !== cost.id))}
+                        className="p-2.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setManualCosts([...manualCosts, { id: Date.now().toString(), name: '', value: '' }])}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-xl transition cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Custo
+                  </button>
+                </div>
+
+                <div className="pt-3 border-t border-slate-200 flex flex-col gap-1">
+                  {(() => {
+                    const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
+                    const sellPrice = parseCurrency(price);
+                    const profit = sellPrice - totalCost;
+                    const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : '0.0';
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Custo Total:</span>
+                          <span className="font-bold text-slate-900">R$ {totalCost.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Preço de Venda:</span>
+                          <span className="font-bold text-slate-900">R$ {sellPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
+                          <span className="text-slate-800 font-bold">Lucro Obtido:</span>
+                          <span className={`font-extrabold ${profit > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                            R$ {profit.toFixed(2)} ({margin}%)
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
