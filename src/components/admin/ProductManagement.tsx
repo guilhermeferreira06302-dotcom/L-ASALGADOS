@@ -55,7 +55,7 @@ export const ProductManagement: React.FC = () => {
     setName(prod.name);
     setCategory(prod.category);
     setCustomCategoryName('');
-    setPrice(prod.price.toString());
+    setPrice(currencyMask(prod.price.toFixed(2)));
     setImage(prod.image);
     setDescription(prod.description);
     setPrepTimeMin(prod.prepTimeMin.toString());
