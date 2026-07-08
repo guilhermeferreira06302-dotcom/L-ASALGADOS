@@ -163,14 +163,15 @@ export const ProductManagement: React.FC = () => {
 
       {/* Products Table */}
       <div className="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider">
+            <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 text-sm uppercase tracking-wider">
               <th className="p-4 font-bold rounded-tl-3xl">Produto</th>
               <th className="p-4 font-bold">Categoria</th>
               <th className="p-4 font-bold">Status</th>
               <th className="p-4 font-bold">Venda</th>
-              <th className="p-4 font-bold">Custo (Margem)</th>
+              <th className="p-4 font-bold">Custo</th>
+              <th className="p-4 font-bold">Margem</th>
               <th className="p-4 font-bold text-right rounded-tr-3xl">Ações</th>
             </tr>
           </thead>
@@ -185,20 +186,20 @@ export const ProductManagement: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
                       <div>
-                        <h3 className="font-extrabold text-sm text-slate-900">{prod.name}</h3>
-                        <p className="text-[10px] text-slate-500 line-clamp-1 max-w-[200px]">{prod.description}</p>
+                        <h3 className="font-extrabold text-base text-slate-900">{prod.name}</h3>
+                        <p className="text-xs text-slate-500 line-clamp-1 max-w-[200px]">{prod.description}</p>
                       </div>
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200">
+                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200">
                       {prod.category}
                     </span>
                   </td>
                   <td className="p-4">
                     <button
                       onClick={() => updateProduct({ ...prod, available: !prod.available })}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
                         prod.available 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
                           : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
@@ -208,24 +209,28 @@ export const ProductManagement: React.FC = () => {
                     </button>
                   </td>
                   <td className="p-4">
-                    <span className="text-sm font-extrabold text-slate-800 whitespace-nowrap">
+                    <span className="text-base font-extrabold text-slate-800 whitespace-nowrap">
                       R$ {prod.price.toFixed(2)}
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="text-xs flex flex-col">
-                      <span className="text-slate-700 font-medium">R$ {prod.costPrice.toFixed(2)}</span>
-                      <span className="text-emerald-500 font-bold text-[10px]">{margin}% margem</span>
-                    </div>
+                    <span className="text-sm text-slate-700 font-bold whitespace-nowrap">
+                      R$ {prod.costPrice.toFixed(2)}
+                    </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-emerald-500 font-extrabold text-sm whitespace-nowrap">
+                      {margin}%
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(prod)}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-purple-600 transition cursor-pointer border border-transparent hover:border-purple-200"
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-purple-600 transition cursor-pointer border border-transparent hover:border-purple-200"
                         title="Editar"
                       >
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => {
@@ -233,10 +238,10 @@ export const ProductManagement: React.FC = () => {
                             deleteProduct(prod.id);
                           }
                         }}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition cursor-pointer border border-transparent hover:border-red-200"
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition cursor-pointer border border-transparent hover:border-red-200"
                         title="Excluir"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </td>
