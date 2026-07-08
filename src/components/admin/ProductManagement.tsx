@@ -34,6 +34,7 @@ export const ProductManagement: React.FC = () => {
   const [minStock, setMinStock] = useState('0,000');
   const [maxStock, setMaxStock] = useState('0,000');
   const [manualCosts, setManualCosts] = useState<{ id: string, name: string, value: string }[]>([]);
+  const [showProfitSummary, setShowProfitSummary] = useState(false);
 
   const openAddModal = () => {
     setEditingProd(null);
@@ -47,6 +48,7 @@ export const ProductManagement: React.FC = () => {
     setMinStock('0,000');
     setMaxStock('0,000');
     setManualCosts([]);
+    setShowProfitSummary(false);
     setShowModal(true);
   };
 
@@ -62,6 +64,7 @@ export const ProductManagement: React.FC = () => {
     setMinStock(prod.minStock !== undefined ? quantityMask(prod.minStock) : '0,000');
     setMaxStock(prod.maxStock !== undefined ? quantityMask(prod.maxStock) : '0,000');
     setManualCosts(prod.costPrice > 0 ? [{ id: Date.now().toString(), name: 'Custo Principal', value: currencyMask(prod.costPrice.toFixed(2)) }] : []);
+    setShowProfitSummary(false);
     setShowModal(true);
   };
 
@@ -386,42 +389,54 @@ export const ProductManagement: React.FC = () => {
                     </div>
                   ))}
                   
-                  <button
-                    type="button"
-                    onClick={() => setManualCosts([...manualCosts, { id: Date.now().toString(), name: '', value: '' }])}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-xl transition cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Custo
-                  </button>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      type="button"
+                      onClick={() => setManualCosts([...manualCosts, { id: Date.now().toString(), name: '', value: '' }])}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-xl transition cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Custo
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowProfitSummary(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-emerald-500 hover:bg-emerald-600 font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 flex flex-col gap-1">
-                  {(() => {
-                    const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
-                    const sellPrice = parseCurrency(price);
-                    const profit = sellPrice - totalCost;
-                    const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : '0.0';
-                    return (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Custo Total:</span>
-                          <span className="font-bold text-slate-900">R$ {totalCost.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Preço de Venda:</span>
-                          <span className="font-bold text-slate-900">R$ {sellPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
-                          <span className="text-slate-800 font-bold">Lucro Obtido:</span>
-                          <span className={`font-extrabold ${profit > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
-                            R$ {profit.toFixed(2)} ({margin}%)
-                          </span>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                {showProfitSummary && (
+                  <div className="pt-3 border-t border-slate-200 flex flex-col gap-1">
+                    {(() => {
+                      const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
+                      const sellPrice = parseCurrency(price);
+                      const profit = sellPrice - totalCost;
+                      const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : '0.0';
+                      return (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Custo Total:</span>
+                            <span className="font-bold text-slate-900">R$ {totalCost.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Preço de Venda:</span>
+                            <span className="font-bold text-slate-900">R$ {sellPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
+                            <span className="text-slate-800 font-bold">Lucro Obtido:</span>
+                            <span className={`font-extrabold ${profit > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                              R$ {profit.toFixed(2)} ({margin}%)
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
