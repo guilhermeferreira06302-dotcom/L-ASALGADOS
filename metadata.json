@@ -1,0 +1,6 @@
+{
+  "name": "Sabor & Gestão — Sistema de Lanchonete",
+  "description": "Sistema completo de gestão para lanchonetes com Painel Administrativo, PDV para funcionários, controle de estoque e inventário, análises gráficas e financeiras.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
