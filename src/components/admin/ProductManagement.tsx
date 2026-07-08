@@ -389,7 +389,7 @@ export const ProductManagement: React.FC = () => {
                     </div>
                   ))}
                   
-                  <div className="flex gap-2 items-center">
+                  <div className="flex justify-between items-center w-full">
                     <button
                       type="button"
                       onClick={() => setManualCosts([...manualCosts, { id: Date.now().toString(), name: '', value: '' }])}
