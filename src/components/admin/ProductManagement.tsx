@@ -161,78 +161,90 @@ export const ProductManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map(prod => {
-          const profit = prod.price - prod.costPrice;
-          const margin = ((profit / prod.price) * 100).toFixed(0);
+      {/* Products Table */}
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-sm">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider">
+              <th className="p-4 font-bold rounded-tl-3xl">Produto</th>
+              <th className="p-4 font-bold">Categoria</th>
+              <th className="p-4 font-bold">Status</th>
+              <th className="p-4 font-bold">Venda</th>
+              <th className="p-4 font-bold">Custo (Margem)</th>
+              <th className="p-4 font-bold text-right rounded-tr-3xl">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtered.map(prod => {
+              const profit = prod.price - prod.costPrice;
+              const margin = ((profit / prod.price) * 100).toFixed(0);
 
-          return (
-            <div key={prod.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-purple-500/40 transition group">
-              <div>
-                <div className="relative h-44 w-full overflow-hidden bg-slate-50">
-                  <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                  <div className="absolute top-3 left-3 flex gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/90 backdrop-blur-md text-slate-900 uppercase tracking-wider border border-slate-300">
+              return (
+                <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
+                      <div>
+                        <h3 className="font-extrabold text-sm text-slate-900">{prod.name}</h3>
+                        <p className="text-[10px] text-slate-500 line-clamp-1 max-w-[200px]">{prod.description}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200">
                       {prod.category}
                     </span>
-                  </div>
-                  <div className="absolute top-3 right-3">
+                  </td>
+                  <td className="p-4">
                     <button
                       onClick={() => updateProduct({ ...prod, available: !prod.available })}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur-md border transition cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer ${
                         prod.available 
-                          ? 'bg-emerald-500/80 text-slate-900 border-emerald-400' 
-                          : 'bg-red-500/80 text-slate-900 border-red-400'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                          : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
                       }`}
                     >
                       {prod.available ? 'Ativo' : 'Esgotado'}
                     </button>
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-extrabold text-base text-slate-900">{prod.name}</h3>
-                    <span className="text-base font-extrabold text-slate-800 whitespace-nowrap">
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm font-extrabold text-slate-800 whitespace-nowrap">
                       R$ {prod.price.toFixed(2)}
                     </span>
-                  </div>
-                  <p className="text-xs text-slate-700 mt-1.5 line-clamp-2">{prod.description}</p>
-                </div>
-              </div>
-
-              <div className="px-5 pb-5 pt-3 border-t border-slate-200/80 bg-slate-50/40 flex items-center justify-between">
-                <div className="text-xs">
-                  <span className="text-slate-600">Custo: R$ {prod.costPrice.toFixed(2)}</span>
-                  <span className="text-emerald-400 font-bold ml-2">({margin}% margem)</span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => openEditModal(prod)}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-purple-300 hover:text-slate-900 transition cursor-pointer border border-slate-300"
-                    title="Editar Ficha e Preço"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (confirm(`Deseja excluir o produto "${prod.name}"?`)) {
-                        deleteProduct(prod.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-red-950/60 text-slate-700 hover:text-red-400 transition cursor-pointer border border-slate-300"
-                    title="Excluir Produto"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                  </td>
+                  <td className="p-4">
+                    <div className="text-xs flex flex-col">
+                      <span className="text-slate-700 font-medium">R$ {prod.costPrice.toFixed(2)}</span>
+                      <span className="text-emerald-500 font-bold text-[10px]">{margin}% margem</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => openEditModal(prod)}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-purple-600 transition cursor-pointer border border-transparent hover:border-purple-200"
+                        title="Editar"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Deseja excluir o produto "${prod.name}"?`)) {
+                            deleteProduct(prod.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition cursor-pointer border border-transparent hover:border-red-200"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Modal Add / Edit Product */}
