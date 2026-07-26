@@ -5,7 +5,7 @@ import {
   Utensils, Plus, Edit3, Trash2, Search, DollarSign, 
   CheckCircle2, XCircle, Sparkles, ChefHat, Layers
 } from 'lucide-react';
-import { currencyMask, parseCurrency, quantityMask, parseQuantity } from '../../utils/masks';
+import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const ProductManagement: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct, ingredients, customCategories, addCustomCategory, updateCustomCategory, deleteCustomCategory } = useApp();
@@ -31,9 +31,10 @@ export const ProductManagement: React.FC = () => {
   const [image, setImage] = useState('');
   const [description, setDescription] = useState('');
   const [prepTimeMin, setPrepTimeMin] = useState('10');
-  const [minStock, setMinStock] = useState('0,000');
-  const [maxStock, setMaxStock] = useState('0,000');
+  const [minStock, setMinStock] = useState('');
+  const [maxStock, setMaxStock] = useState('');
   const [manualCosts, setManualCosts] = useState<{ id: string, name: string, value: string }[]>([]);
+  const [available, setAvailable] = useState(true);
 
   const openAddModal = () => {
     setEditingProd(null);
@@ -44,9 +45,10 @@ export const ProductManagement: React.FC = () => {
     setImage('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80');
     setDescription('');
     setPrepTimeMin('10');
-    setMinStock('0,000');
-    setMaxStock('0,000');
+    setMinStock('');
+    setMaxStock('');
     setManualCosts([]);
+    setAvailable(true);
     setShowModal(true);
   };
 
@@ -57,11 +59,12 @@ export const ProductManagement: React.FC = () => {
     setCustomCategoryName('');
     setPrice(currencyMask(prod.price.toFixed(2)));
     setImage(prod.image);
-    setDescription(prod.description);
+    setDescription(prod.description === 'Sem descrição cadastrada.' ? '' : (prod.description || ''));
     setPrepTimeMin(prod.prepTimeMin.toString());
-    setMinStock(prod.minStock !== undefined ? quantityMask(prod.minStock) : '0,000');
-    setMaxStock(prod.maxStock !== undefined ? quantityMask(prod.maxStock) : '0,000');
+    setMinStock(prod.minStock !== undefined ? prod.minStock.toString() : '');
+    setMaxStock(prod.maxStock !== undefined ? prod.maxStock.toString() : '');
     setManualCosts(prod.costPrice > 0 ? [{ id: Date.now().toString(), name: 'Custo Principal', value: currencyMask(prod.costPrice.toFixed(2)) }] : []);
+    setAvailable(prod.available);
     setShowModal(true);
   };
 
@@ -82,12 +85,12 @@ export const ProductManagement: React.FC = () => {
       price: parseCurrency(price),
       costPrice: totalCost,
       image: image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80',
-      available: true,
-      description: description || 'Sem descrição cadastrada.',
+      available,
+      description: description.trim() || '',
       prepTimeMin: parseInt(prepTimeMin) || 10,
       recipe: [],
-      minStock: parseQuantity(minStock) || 0,
-      maxStock: parseQuantity(maxStock) || 0,
+      minStock: parseInt(minStock, 10) || 0,
+      maxStock: parseInt(maxStock, 10) || 0,
       salesCountMonthly: editingProd ? editingProd.salesCountMonthly : 45
     };
 
@@ -110,6 +113,13 @@ export const ProductManagement: React.FC = () => {
     if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterCat !== 'ALL' && p.category !== filterCat) return false;
     return true;
+  }).sort((a, b) => {
+    if (a.available !== b.available) {
+      return a.available ? -1 : 1;
+    }
+    if (a.category < b.category) return -1;
+    if (a.category > b.category) return 1;
+    return a.name.localeCompare(b.name);
   });
 
   return (
@@ -163,38 +173,37 @@ export const ProductManagement: React.FC = () => {
 
       {/* Products Table */}
       <div className="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-left border-collapse min-w-[900px]">
+        <table className="w-full text-left border-collapse min-w-[1050px]">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 text-sm uppercase tracking-wider">
               <th className="p-4 font-bold rounded-tl-3xl">Produto</th>
-              <th className="p-4 font-bold">Categoria</th>
               <th className="p-4 font-bold">Status</th>
-              <th className="p-4 font-bold">Venda</th>
+              <th className="p-4 font-bold">Categoria</th>
+              <th className="p-4 font-bold">Qtd mín</th>
+              <th className="p-4 font-bold">Qtd máx</th>
               <th className="p-4 font-bold">Custo</th>
-              <th className="p-4 font-bold">Margem</th>
+              <th className="p-4 font-bold">Valor de venda</th>
+              <th className="p-4 font-bold">Lucro</th>
               <th className="p-4 font-bold text-right rounded-tr-3xl">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map(prod => {
+            {filtered.map((prod, index) => {
               const profit = prod.price - prod.costPrice;
-              const margin = ((profit / prod.price) * 100).toFixed(0);
+              const markup = prod.costPrice > 0 ? ((profit / prod.costPrice) * 100).toFixed(0) : (profit > 0 ? '100' : '0');
+
+              const isStatusChange = index > 0 && prod.available !== filtered[index - 1].available;
+              const isNewCategory = index > 0 && (prod.category !== filtered[index - 1].category || isStatusChange);
 
               return (
-                <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr key={prod.id} className={`hover:bg-slate-50/50 transition-colors group ${isNewCategory ? '!border-t-[3px] !border-slate-300' : ''}`}>
                   <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
-                      <div>
-                        <h3 className="font-extrabold text-base text-slate-900">{prod.name}</h3>
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-900">{prod.name}</h3>
+                      {prod.description && prod.description !== 'Sem descrição cadastrada.' && (
                         <p className="text-xs text-slate-500 line-clamp-1 max-w-[200px]">{prod.description}</p>
-                      </div>
+                      )}
                     </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200">
-                      {prod.category}
-                    </span>
                   </td>
                   <td className="p-4">
                     <button
@@ -205,12 +214,22 @@ export const ProductManagement: React.FC = () => {
                           : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
                       }`}
                     >
-                      {prod.available ? 'Ativo' : 'Esgotado'}
+                      {prod.available ? 'Ativo' : 'Desativado'}
                     </button>
                   </td>
                   <td className="p-4">
-                    <span className="text-base font-extrabold text-slate-800 whitespace-nowrap">
-                      R$ {prod.price.toFixed(2)}
+                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200">
+                      {prod.category}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm font-bold text-slate-700 whitespace-nowrap">
+                      {prod.minStock !== undefined ? prod.minStock : 0}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm font-bold text-slate-700 whitespace-nowrap">
+                      {prod.maxStock !== undefined ? prod.maxStock : 0}
                     </span>
                   </td>
                   <td className="p-4">
@@ -219,9 +238,17 @@ export const ProductManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className="text-emerald-500 font-extrabold text-sm whitespace-nowrap">
-                      {margin}%
+                    <span className="text-base font-extrabold text-slate-800 whitespace-nowrap">
+                      R$ {prod.price.toFixed(2)}
                     </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-emerald-600 font-extrabold text-sm whitespace-nowrap">
+                      R$ {profit.toFixed(2)}
+                    </div>
+                    <div className="text-slate-500 font-bold text-[11px]">
+                      ({markup}%)
+                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
@@ -264,7 +291,7 @@ export const ProductManagement: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="overflow-y-auto space-y-4 text-xs pr-1 flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block text-slate-700 font-semibold mb-1">Nome do Produto</label>
                   <input
@@ -292,11 +319,26 @@ export const ProductManagement: React.FC = () => {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Status</label>
+                  <select
+                    value={available ? 'true' : 'false'}
+                    onChange={(e) => setAvailable(e.target.value === 'true')}
+                    className={`w-full border rounded-xl p-2.5 font-bold text-sm transition cursor-pointer ${
+                      available
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}
+                  >
+                    <option value="true" className="bg-white text-slate-900 font-semibold">Ativado</option>
+                    <option value="false" className="bg-white text-slate-900 font-semibold">Desativado</option>
+                  </select>
+                </div>
               </div>
 
 
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Preço de Venda (R$)</label>
                   <input
@@ -310,26 +352,16 @@ export const ProductManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">URL da Imagem</label>
-                  <input
-                    type="text"
-                    placeholder="https://images.unsplash..."
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
                   <label className="block text-slate-700 font-semibold mb-1">Estoque mínimo</label>
                   <input
                     type="text"
                     inputMode="numeric"
-                    placeholder="0,000"
+                    placeholder="0"
                     value={minStock}
-                    onChange={(e) => setMinStock(quantityMask(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setMinStock(val !== '' ? String(parseInt(val, 10)) : '');
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-bold text-sm"
                   />
                 </div>
@@ -338,9 +370,12 @@ export const ProductManagement: React.FC = () => {
                   <input
                     type="text"
                     inputMode="numeric"
-                    placeholder="0,000"
+                    placeholder="0"
                     value={maxStock}
-                    onChange={(e) => setMaxStock(quantityMask(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setMaxStock(val !== '' ? String(parseInt(val, 10)) : '');
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-bold text-sm"
                   />
                 </div>
@@ -408,7 +443,7 @@ export const ProductManagement: React.FC = () => {
                     className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-xl transition cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    Adicionar Custo
+                    Adicionar custos
                   </button>
                 </div>
 
@@ -417,7 +452,7 @@ export const ProductManagement: React.FC = () => {
                     const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
                     const sellPrice = parseCurrency(price);
                     const profit = sellPrice - totalCost;
-                    const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : '0.0';
+                    const markup = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : (profit > 0 ? '100.0' : '0.0');
                     return (
                       <>
                         <div className="flex justify-between text-sm">
@@ -431,7 +466,7 @@ export const ProductManagement: React.FC = () => {
                         <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
                           <span className="text-slate-800 font-bold">Lucro Obtido:</span>
                           <span className={`font-extrabold ${profit > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
-                            R$ {profit.toFixed(2)} ({margin}%)
+                            R$ {profit.toFixed(2)} ({markup}%)
                           </span>
                         </div>
                       </>
@@ -450,7 +485,7 @@ export const ProductManagement: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-slate-900 font-bold rounded-xl shadow-md transition cursor-pointer"
+                  className="px-5 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-xl shadow-md transition cursor-pointer"
                 >
                   Salvar Produto
                 </button>

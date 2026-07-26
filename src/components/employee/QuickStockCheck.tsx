@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { isStockActive } from '../../types';
 import { Package, Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export const QuickStockCheck: React.FC = () => {
@@ -7,7 +8,7 @@ export const QuickStockCheck: React.FC = () => {
   const [search, setSearch] = useState('');
 
   const filtered = ingredients.filter(i => 
-    !search || i.name.toLowerCase().includes(search.toLowerCase())
+    isStockActive(i) && (!search || i.name.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (

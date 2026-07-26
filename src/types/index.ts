@@ -18,10 +18,20 @@ export interface Ingredient {
   unit: 'kg' | 'g' | 'l' | 'ml' | 'un';
   currentStock: number;
   minStock: number;
+  maxStock?: number;
+  category?: string;
   costPerUnit: number; // Cost in R$ per unit (e.g. per kg or un)
   supplier: string;
-  lastUpdated: string;
+  operator?: string;
+  hasReceivedEntry?: boolean;
 }
+
+export const isStockActive = (ing: Ingredient): boolean => {
+  if (ing.hasReceivedEntry === true) return true;
+  if (ing.currentStock > 0) return true;
+  if (ing.lastUpdated !== 'Sem entrada' && ing.lastUpdated !== 'Pendente de Entrada' && ing.lastUpdated !== '') return true;
+  return false;
+};
 
 export interface RecipeItem {
   ingredientId: string;
@@ -97,4 +107,18 @@ export interface InventoryAudit {
   itemsAudited: number;
   discrepanciesCount: number;
   notes?: string;
+}
+
+export type StockMovementType = 'ENTRADA' | 'SAIDA';
+
+export interface StockMovement {
+  id: string;
+  type: StockMovementType;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: number;
+  unit: string;
+  reason: string;
+  operator: string;
+  date: string; // ISO string for easy sorting/filtering
 }

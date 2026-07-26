@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   User, UserRole, Ingredient, Product, Order, FinancialTransaction, 
-  InventoryAudit, OrderStatus 
+  InventoryAudit, OrderStatus, isStockActive, StockMovement
 } from '../types';
 import { 
   INITIAL_USERS, INITIAL_INGREDIENTS, INITIAL_PRODUCTS, 
@@ -17,6 +17,7 @@ interface AppContextType {
   orders: Order[];
   transactions: FinancialTransaction[];
   audits: InventoryAudit[];
+  stockMovements: StockMovement[];
   login: (email: string, role?: UserRole) => boolean;
   loginAsUser: (user: User) => void;
   logout: () => void;
@@ -28,7 +29,7 @@ interface AppContextType {
   // Stock / Ingredient actions
   addIngredient: (ing: Omit<Ingredient, 'id' | 'lastUpdated'>) => void;
   updateIngredient: (ing: Ingredient) => void;
-  adjustStock: (ingredientId: string, quantityChange: number, reason?: string) => void;
+  adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string) => void;
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
   // Order actions
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Order;
@@ -57,6 +58,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(INITIAL_TRANSACTIONS);
   const [audits, setAudits] = useState<InventoryAudit[]>(INITIAL_AUDITS);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>(['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO']);
 
   // Load from LocalStorage
@@ -65,11 +67,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.ingredients) setIngredients(parsed.ingredients);
+        if (parsed.ingredients) {
+          const catMap: Record<string, string> = {
+            'PÃES & MASSAS': 'BURGER',
+            'CARNES & FRIOS': 'BURGER',
+            'LATICÍNIOS & QUEIJOS': 'BURGER',
+            'HORTIFRUTI': 'BURGER',
+            'MOLHOS & CONDIMENTOS': 'BURGER',
+            'CONGELADOS & PORÇÕES': 'PORCAO',
+            'MERCEARIA & ÓLEOS': 'PORCAO',
+            'BEBIDAS': 'BEBIDA'
+          };
+          setIngredients(parsed.ingredients.map((ing: Ingredient) => ({
+            ...ing,
+            unit: 'un' as const,
+            category: (ing.category && catMap[ing.category]) ? catMap[ing.category] : (ing.category || 'BURGER')
+          })));
+        }
         if (parsed.products) setProducts(parsed.products);
         if (parsed.orders) setOrders(parsed.orders);
         if (parsed.transactions) setTransactions(parsed.transactions);
         if (parsed.audits) setAudits(parsed.audits);
+        if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
         if (parsed.customCategories && parsed.customCategories.length > 0) {
           setCustomCategories(parsed.customCategories);
         }
@@ -87,9 +106,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       orders,
       transactions,
       audits,
+      stockMovements,
       customCategories
     }));
-  }, [ingredients, products, orders, transactions, audits, customCategories]);
+  }, [ingredients, products, orders, transactions, audits, stockMovements, customCategories]);
+
+  // Cruzamento estrito: A aba de Estoque (ingredients) deve conter APENAS o que está cadastrado na aba de Produtos
+  useEffect(() => {
+    setIngredients(prev => {
+      const activeProducts = products.filter(p => p.available);
+      const activeProdIds = new Set(activeProducts.map(p => `ing-prod-${p.id}`));
+      const activeProdNames = new Set(activeProducts.map(p => p.name.toLowerCase().trim()));
+      
+      // 1. Manter no estoque APENAS os itens cujos IDs ou nomes correspondam exatamente a um produto cadastrado e ativo
+      let updated = prev.filter(ing => {
+        if (ing.id.startsWith('ing-auto-')) return false;
+        if (ing.id.startsWith('ing-prod-')) {
+          return activeProdIds.has(ing.id);
+        }
+        return activeProdNames.has(ing.name.toLowerCase().trim());
+      });
+
+      let changed = updated.length !== prev.length;
+
+      // 2. Sincronizar ou inserir os produtos cadastrados com exatidão no estoque (usando o valor do lucro: preço - custo)
+      activeProducts.forEach(prod => {
+        const prodIngId = `ing-prod-${prod.id}`;
+        const targetValue = Math.max(0, prod.price - prod.costPrice);
+        
+        const existsIdx = updated.findIndex(i => i.id === prodIngId || i.name.toLowerCase().trim() === prod.name.toLowerCase().trim());
+        
+        if (existsIdx !== -1) {
+          const existing = updated[existsIdx];
+          if (
+            existing.id !== prodIngId ||
+            existing.name !== prod.name ||
+            existing.minStock !== (prod.minStock ?? 0) ||
+            existing.maxStock !== (prod.maxStock ?? 0) ||
+            existing.category !== prod.category ||
+            existing.costPerUnit !== targetValue
+          ) {
+            updated[existsIdx] = {
+              ...existing,
+              id: prodIngId,
+              name: prod.name,
+              minStock: prod.minStock ?? 0,
+              maxStock: prod.maxStock ?? 0,
+              category: prod.category,
+              costPerUnit: targetValue
+            };
+            changed = true;
+          }
+        } else {
+          updated.push({
+            id: prodIngId,
+            name: prod.name,
+            unit: 'un' as const,
+            currentStock: 0,
+            minStock: prod.minStock ?? 0,
+            maxStock: prod.maxStock ?? 0,
+            category: prod.category,
+            costPerUnit: targetValue,
+            supplier: 'Cadastrado via Produtos',
+            lastUpdated: 'Sem entrada',
+            hasReceivedEntry: false,
+            operator: currentUser?.name || 'Carlos Mendes'
+          });
+          changed = true;
+        }
+      });
+
+      return changed ? updated : prev;
+    });
+  }, [products, currentUser?.name]);
 
   const login = (email: string, role?: UserRole): boolean => {
     const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -141,6 +230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addIngredient = (ingData: Omit<Ingredient, 'id' | 'lastUpdated'>) => {
     const newIng: Ingredient = {
       ...ingData,
+      unit: 'un',
       id: `ing-${Date.now()}`,
       lastUpdated: 'Agora mesmo'
     };
@@ -148,17 +238,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateIngredient = (updated: Ingredient) => {
-    setIngredients(prev => prev.map(i => i.id === updated.id ? { ...updated, lastUpdated: 'Agora mesmo' } : i));
+    setIngredients(prev => prev.map(i => i.id === updated.id ? { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : (i.hasReceivedEntry ?? (updated.currentStock > 0)) } : i));
   };
 
-  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string) => {
+  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string) => {
+    const targetIng = ingredients.find(i => i.id === ingredientId);
+    if (targetIng) {
+      const movement: StockMovement = {
+        id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: quantityChange > 0 ? 'ENTRADA' : 'SAIDA',
+        ingredientId: targetIng.id,
+        ingredientName: targetIng.name,
+        quantity: Math.abs(quantityChange),
+        unit: targetIng.unit,
+        reason: reason || 'Ajuste manual',
+        operator: operatorName || currentUser?.name || 'Sistema',
+        date: new Date().toISOString()
+      };
+      setStockMovements(m => [movement, ...m]);
+    }
+
     setIngredients(prev => prev.map(ing => {
       if (ing.id === ingredientId) {
         const newStock = Math.max(0, ing.currentStock + quantityChange);
         return {
           ...ing,
           currentStock: newStock,
-          lastUpdated: 'Agora mesmo'
+          lastUpdated: 'Agora mesmo',
+          hasReceivedEntry: quantityChange > 0 ? true : (ing.hasReceivedEntry ?? (ing.currentStock > 0)),
+          ...(operatorName ? { operator: operatorName } : {})
         };
       }
       return ing;
@@ -233,15 +341,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetOrder = orders.find(o => o.id === orderId);
     if (!targetOrder) return;
 
-    // If changing to ENTREGUE for the first time, deduct recipe items from inventory!
+    // Ao entregar o pedido, deduz a quantidade vendida direto do estoque do produto correspondente!
     if (newStatus === 'ENTREGUE' && targetOrder.status !== 'ENTREGUE') {
       targetOrder.items.forEach(item => {
-        const prod = products.find(p => p.id === item.productId);
-        if (prod && prod.recipe) {
-          prod.recipe.forEach(rec => {
-            adjustStock(rec.ingredientId, -(rec.quantity * item.quantity), `Baixa automática Pedido #${targetOrder.orderNumber}`);
-          });
-        }
+        const targetIngId = `ing-prod-${item.productId}`;
+        adjustStock(targetIngId, -item.quantity, `Venda Pedido #${targetOrder.orderNumber}`);
       });
     }
 
@@ -260,7 +364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const apiKey = process.env.GEMINI_API_KEY;
     
     // Prepare concise context summary
-    const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStock).map(i => `${i.name} (Estoque atual: ${i.currentStock}${i.unit}, Mínimo: ${i.minStock}${i.unit})`).join('; ');
+    const lowStockItems = ingredients.filter(i => isStockActive(i) && i.currentStock <= i.minStock).map(i => `${i.name} (Estoque atual: ${i.currentStock}${i.unit}, Mínimo: ${i.minStock}${i.unit})`).join('; ');
     const totalInflow = transactions.filter(t => t.type === 'ENTRADA').reduce((sum, t) => sum + t.amount, 0);
     const totalOutflow = transactions.filter(t => t.type === 'SAIDA').reduce((sum, t) => sum + t.amount, 0);
     const netProfit = totalInflow - totalOutflow;
@@ -325,6 +429,11 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setProducts(prev => prev.map(p => 
       p.category === oldName ? { ...p, category: cleanNew } : p
     ));
+
+    // Update ingredients that use this category
+    setIngredients(prev => prev.map(i => 
+      i.category === oldName ? { ...i, category: cleanNew } : i
+    ));
   };
 
   const deleteCustomCategory = (name: string) => {
@@ -334,6 +443,11 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setProducts(prev => prev.map(p => 
       p.category === name ? { ...p, category: 'GERAL' } : p
     ));
+
+    // Update ingredients back to GERAL
+    setIngredients(prev => prev.map(i => 
+      i.category === name ? { ...i, category: 'GERAL' } : i
+    ));
   };
 
   const resetToDefaultData = () => {
@@ -342,6 +456,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setOrders(INITIAL_ORDERS);
     setTransactions(INITIAL_TRANSACTIONS);
     setAudits(INITIAL_AUDITS);
+    setStockMovements([]);
     setCustomCategories(['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO']);
   };
 
@@ -355,6 +470,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         orders,
         transactions,
         audits,
+        stockMovements,
         customCategories,
         login,
         loginAsUser,

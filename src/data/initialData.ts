@@ -31,104 +31,82 @@ export const INITIAL_USERS: User[] = [
 
 export const INITIAL_INGREDIENTS: Ingredient[] = [
   {
-    id: 'ing-1',
-    name: 'Pão Brioche Artesanal',
+    id: 'ing-prod-prod-1',
+    name: 'Smash Bacon Supreme',
     unit: 'un',
-    currentStock: 140,
-    minStock: 50,
-    costPerUnit: 1.80,
-    supplier: 'Padaria Imperial',
-    lastUpdated: 'Hoje, 08:30'
+    currentStock: 35,
+    minStock: 10,
+    maxStock: 50,
+    category: 'BURGER',
+    costPerUnit: 23.10, // Lucro: 34.90 - 11.80
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Hoje, 08:30',
+    operator: 'Carlos Mendes'
   },
   {
-    id: 'ing-2',
-    name: 'Blend Angus 180g (Carne)',
+    id: 'ing-prod-prod-2',
+    name: 'Classic Salad Burger',
     unit: 'un',
-    currentStock: 32,
-    minStock: 40,
-    costPerUnit: 5.50,
-    supplier: 'Frigorífico Bom Corte',
-    lastUpdated: 'Hoje, 09:15'
+    currentStock: 28,
+    minStock: 10,
+    maxStock: 40,
+    category: 'BURGER',
+    costPerUnit: 19.10, // Lucro: 28.50 - 9.40
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Hoje, 09:15',
+    operator: 'Roberto Silva'
   },
   {
-    id: 'ing-3',
-    name: 'Queijo Cheddar Fatiado',
-    unit: 'g',
-    currentStock: 4800,
-    minStock: 2000,
-    costPerUnit: 0.045, // R$ 45/kg -> 0.045/g
-    supplier: 'Laticínios Vale Verde',
-    lastUpdated: 'Ontem, 16:00'
+    id: 'ing-prod-prod-3',
+    name: 'Batata Rústica com Cheddar & Bacon',
+    unit: 'un',
+    currentStock: 42,
+    minStock: 15,
+    maxStock: 60,
+    category: 'PORCAO',
+    costPerUnit: 22.70, // Lucro: 29.90 - 7.20
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Ontem, 16:00',
+    operator: 'Roberto Silva'
   },
   {
-    id: 'ing-4',
-    name: 'Bacon Defumado em Tiras',
-    unit: 'g',
-    currentStock: 1100,
-    minStock: 1500,
-    costPerUnit: 0.052,
-    supplier: 'Frigorífico Bom Corte',
-    lastUpdated: 'Hoje, 10:00'
-  },
-  {
-    id: 'ing-5',
-    name: 'Batata Palito Congelada 9mm',
-    unit: 'g',
-    currentStock: 18500,
-    minStock: 8000,
-    costPerUnit: 0.018,
-    supplier: 'Distribuidora FrioSul',
-    lastUpdated: 'Há 2 dias'
-  },
-  {
-    id: 'ing-6',
+    id: 'ing-prod-prod-4',
     name: 'Refrigerante Cola Lata 350ml',
     unit: 'un',
     currentStock: 18,
-    minStock: 36,
-    costPerUnit: 2.90,
-    supplier: 'Ambev / Distribuidora',
-    lastUpdated: 'Ontem, 14:00'
+    minStock: 24,
+    maxStock: 120,
+    category: 'BEBIDA',
+    costPerUnit: 4.60, // Lucro: 7.50 - 2.90
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Ontem, 14:00',
+    operator: 'Ana Beatriz'
   },
   {
-    id: 'ing-7',
-    name: 'Alface Americana Limpa',
-    unit: 'g',
-    currentStock: 2400,
-    minStock: 1000,
-    costPerUnit: 0.012,
-    supplier: 'Hortifruti São José',
-    lastUpdated: 'Hoje, 07:45'
+    id: 'ing-prod-prod-5',
+    name: 'Combo Casal Monster (2 Burgers + Batata + 2 Refri)',
+    unit: 'un',
+    currentStock: 15,
+    minStock: 5,
+    maxStock: 25,
+    category: 'COMBO',
+    costPerUnit: 56.40, // Lucro: 84.90 - 28.50
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Hoje, 10:00',
+    operator: 'Carlos Mendes'
   },
   {
-    id: 'ing-8',
-    name: 'Tomate Fresco Fatiado',
-    unit: 'g',
-    currentStock: 3100,
-    minStock: 1500,
-    costPerUnit: 0.010,
-    supplier: 'Hortifruti São José',
-    lastUpdated: 'Hoje, 07:45'
-  },
-  {
-    id: 'ing-9',
-    name: 'Molho Especial da Casa',
-    unit: 'ml',
-    currentStock: 5400,
-    minStock: 2000,
-    costPerUnit: 0.025,
-    supplier: 'Produção Interna',
-    lastUpdated: 'Hoje, 11:00'
-  },
-  {
-    id: 'ing-10',
-    name: 'Óleo de Algodão para Fritura',
-    unit: 'l',
-    currentStock: 35,
-    minStock: 15,
-    costPerUnit: 9.50,
-    supplier: 'Atacadão Alimentos',
-    lastUpdated: 'Há 3 dias'
+    id: 'ing-prod-prod-6',
+    name: 'Churros Artesanais com Doce de Leite',
+    unit: 'un',
+    currentStock: 22,
+    minStock: 8,
+    maxStock: 30,
+    category: 'SOBREMESA',
+    costPerUnit: 14.40, // Lucro: 18.90 - 4.50
+    supplier: 'Cadastrado via Produtos',
+    lastUpdated: 'Hoje, 09:00',
+    operator: 'Carlos Mendes'
   }
 ];
 
@@ -144,6 +122,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Dois burgers smash 90g com crosta crocante, muito queijo cheddar derretido, farofa de bacon crocante no pão brioche selado na manteiga.',
     prepTimeMin: 12,
     salesCountMonthly: 342,
+    minStock: 10,
+    maxStock: 50,
     recipe: [
       { ingredientId: 'ing-1', quantity: 1 },    // 1 pão
       { ingredientId: 'ing-2', quantity: 1 },    // 1 blend angus
@@ -163,6 +143,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Hambúrguer artesanal 180g, queijo cheddar, alface americana crocante, tomate fresco e maionese verde da casa no pão brioche.',
     prepTimeMin: 10,
     salesCountMonthly: 215,
+    minStock: 10,
+    maxStock: 40,
     recipe: [
       { ingredientId: 'ing-1', quantity: 1 },
       { ingredientId: 'ing-2', quantity: 1 },
@@ -183,6 +165,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Porção generosa de 400g de batata palito crocante coberta com creme de cheddar derretido e pedacinhos de bacon frito.',
     prepTimeMin: 8,
     salesCountMonthly: 289,
+    minStock: 15,
+    maxStock: 60,
     recipe: [
       { ingredientId: 'ing-5', quantity: 400 },
       { ingredientId: 'ing-3', quantity: 80 },
@@ -200,6 +184,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Lata 350ml bem gelada com opção de gelo e limão.',
     prepTimeMin: 1,
     salesCountMonthly: 510,
+    minStock: 24,
+    maxStock: 120,
     recipe: [
       { ingredientId: 'ing-6', quantity: 1 }
     ]
@@ -215,6 +201,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '2x Smash Bacon Supreme + 1 Porção de Batata com Cheddar + 2 Refris Cola lata. Economia de 15%!',
     prepTimeMin: 15,
     salesCountMonthly: 168,
+    minStock: 5,
+    maxStock: 25,
     recipe: [
       { ingredientId: 'ing-1', quantity: 2 },
       { ingredientId: 'ing-2', quantity: 2 },
@@ -236,6 +224,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '6 minichurros crocantes polvilhados com açúcar e canela acompanhados de pote de doce de leite argentino.',
     prepTimeMin: 6,
     salesCountMonthly: 124,
+    minStock: 8,
+    maxStock: 30,
     recipe: []
   }
 ];

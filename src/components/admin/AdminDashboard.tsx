@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { isStockActive } from '../../types';
 import { 
   DollarSign, TrendingUp, Package, AlertTriangle, ArrowUpRight, 
   ShoppingBag, Award
@@ -18,7 +19,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   const netProfit = inflow - outflow;
   const margin = inflow > 0 ? ((netProfit / inflow) * 100).toFixed(1) : '0';
 
-  const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStock);
+  const lowStockItems = ingredients.filter(i => isStockActive(i) && i.currentStock <= i.minStock);
   const totalOrdersCount = orders.length + 380; // realistic aggregate monthly count
 
   // Weekly Revenue Mock data combined with transactions

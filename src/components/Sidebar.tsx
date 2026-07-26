@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Shield, ChefHat, LayoutDashboard, DollarSign, Package, Utensils,
   Bell, AlertTriangle, CheckCircle2, RotateCcw, LogOut, X,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { quantityMask, parseQuantity } from '../utils/masks';
+import { isStockActive } from '../types';
 
 interface SidebarProps {
   activePortal: 'ADMIN' | 'FUNCIONARIO';
@@ -24,11 +27,95 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   setIsMobileOpen,
 }) => {
-  const { currentUser, logout, switchRole, ingredients, resetToDefaultData } = useApp();
+  const { currentUser, logout, switchRole, ingredients, resetToDefaultData, adjustStock } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStock);
+  // Material Inflow/Outflow modal state
+  const [materialModalType, setMaterialModalType] = useState<'ENTRADA' | 'SAIDA' | null>(null);
+  const [selectedCat, setSelectedCat] = useState<string>('');
+  const [selectedMatId, setSelectedMatId] = useState<string>('');
+  const [matQty, setMatQty] = useState<string>('');
+  const [matDate, setMatDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [matTime, setMatTime] = useState<string>(new Date().toTimeString().slice(0, 5));
+  const [matNotes, setMatNotes] = useState<string>('');
+  const [outflowReason, setOutflowReason] = useState<string>('Venda');
+
+  useEffect(() => {
+    if (!materialModalType) return;
+    
+    // Atualiza a cada segundo para garantir a virada do minuto
+    const interval = setInterval(() => {
+      setMatDate(new Date().toISOString().split('T')[0]);
+      setMatTime(new Date().toTimeString().slice(0, 5));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [materialModalType]);
+
+  const materialCategories = Array.from(new Set(
+    ingredients.map(ing => ing.category || 'INSUMOS GERAIS')
+  )).sort();
+
+  const availableMaterials = ingredients.filter(ing => {
+    if (!selectedCat) return false;
+    if (materialModalType === 'SAIDA' && !isStockActive(ing)) return false;
+    return (ing.category || 'INSUMOS GERAIS') === selectedCat;
+  });
+
+  const openMaterialModal = (type: 'ENTRADA' | 'SAIDA') => {
+    setMaterialModalType(type);
+    setSelectedCat('');
+    setSelectedMatId('');
+    setMatQty('');
+    setMatDate(new Date().toISOString().split('T')[0]);
+    setMatTime(new Date().toTimeString().slice(0, 5));
+    setOutflowReason('Venda');
+    setMatNotes('');
+  };
+
+  const handleConfirmMaterial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMatId || !matQty || !materialModalType) return;
+    
+    const qtyNum = parseQuantity(matQty);
+    if (qtyNum <= 0) return;
+
+    const targetIng = ingredients.find(i => i.id === selectedMatId);
+    if (!targetIng) return;
+
+    const changeNum = materialModalType === 'ENTRADA' ? qtyNum : -qtyNum;
+    const formattedDateTime = `${matDate.split('-').reverse().join('/')} às ${matTime}`;
+    
+    let finalNotes = matNotes;
+    if (materialModalType === 'SAIDA') {
+      if (outflowReason === 'Venda') {
+        finalNotes = 'Venda';
+      } else if (outflowReason === 'Prejuízo') {
+        finalNotes = `Prejuízo: ${matNotes}`;
+      }
+    }
+    const reasonText = finalNotes || (materialModalType === 'ENTRADA' ? 'Sem observação' : 'Sem observação');
+
+    adjustStock(selectedMatId, changeNum, reasonText, currentUser?.name || 'Operador da Loja');
+    
+    setMaterialModalType(null);
+
+    // Trigger celebration confetti on Entrada
+    if (materialModalType === 'ENTRADA') {
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.6 }
+        });
+      } catch (err) {
+        // ignore
+      }
+    }
+  };
+
+  const lowStockItems = ingredients.filter(i => isStockActive(i) && i.currentStock <= i.minStock);
 
   const handlePortalSwitch = (portal: 'ADMIN' | 'FUNCIONARIO') => {
     setActivePortal(portal);
@@ -168,13 +255,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Package className={`w-4 h-4 ${adminTab === 'ESTOQUE' ? 'text-purple-400' : 'text-slate-700'}`} />
-                  <span>Estoque & Inventário</span>
+                  <span>Estoque</span>
                 </div>
                 {lowStockItems.length > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-extrabold">
                     {lowStockItems.length}
                   </span>
                 )}
+              </button>
+
+              {/* Sub-actions for Estoque in Sidebar */}
+              <div className="grid grid-cols-2 gap-1.5 px-1 pt-0.5 pb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (adminTab !== 'ESTOQUE') handleTabClick('ESTOQUE');
+                    openMaterialModal('ENTRADA');
+                  }}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-[11px] shadow-sm transition cursor-pointer border border-emerald-600/20"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Entrada</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (adminTab !== 'ESTOQUE') handleTabClick('ESTOQUE');
+                    openMaterialModal('SAIDA');
+                  }}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-extrabold text-[11px] shadow-sm transition cursor-pointer border border-orange-600/20"
+                >
+                  <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Saída</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleTabClick('MOVIMENTACAO')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  adminTab === 'MOVIMENTACAO'
+                    ? 'bg-gradient-to-r from-blue-500/15 to-blue-500/5 text-blue-500 border-l-4 border-blue-500 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <RotateCcw className={`w-4 h-4 ${adminTab === 'MOVIMENTACAO' ? 'text-blue-500' : 'text-slate-700'}`} />
+                  <span>Movimentação</span>
+                </div>
               </button>
 
               <button
@@ -187,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Utensils className={`w-4 h-4 ${adminTab === 'PRODUTOS' ? 'text-slate-900' : 'text-slate-700'}`} />
-                  <span>Cardápio & Produtos</span>
+                  <span>Cadastrar Produtos</span>
                 </div>
               </button>
             </div>
@@ -322,6 +449,202 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         </div>
       </aside>
+
+      {/* Material Inflow / Outflow Modal (Entrada/Saída de Material) from Sidebar */}
+      {materialModalType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                {materialModalType === 'ENTRADA' ? (
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
+                    <ArrowDownRight className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm">
+                    <ArrowUpRight className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg">
+                    {materialModalType === 'ENTRADA' ? 'Entrada de Material' : 'Saída de Material'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {materialModalType === 'ENTRADA' ? 'Recebimento de mercadoria / reposição' : 'Baixa de estoque / consumo interno'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMaterialModalType(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmMaterial} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-slate-500" />
+                  <span>1. Categoria do Produto / Material</span>
+                </label>
+                <select
+                  value={selectedCat}
+                  onChange={(e) => {
+                    const newCat = e.target.value;
+                    setSelectedCat(newCat);
+                    const firstInCat = ingredients.find(i => (i.category || 'INSUMOS GERAIS') === newCat && (materialModalType !== 'SAIDA' || isStockActive(i)));
+                    setSelectedMatId(firstInCat ? firstInCat.id : '');
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+                  required
+                >
+                  <option value="">Selecione a categoria...</option>
+                  {materialCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-slate-500" />
+                  <span>2. Nome do Produto / Material</span>
+                </label>
+                <select
+                  value={selectedMatId}
+                  onChange={(e) => setSelectedMatId(e.target.value)}
+                  disabled={!selectedCat}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition disabled:bg-slate-100 disabled:text-slate-400"
+                  required
+                >
+                  {!selectedCat ? (
+                    <option value="">← Selecione a categoria acima primeiro</option>
+                  ) : (
+                    <>
+                      {availableMaterials.map(mat => (
+                        <option key={mat.id} value={mat.id}>
+                          {mat.name} — Estoque atual: {mat.currentStock} {mat.unit}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                {selectedMatId && (
+                  <p className="text-[11px] font-semibold text-slate-500 mt-1 pl-1">
+                    ✓ Item selecionado. Unidade de medida: <span className="text-slate-800 font-bold uppercase">{ingredients.find(i => i.id === selectedMatId)?.unit || 'un'}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Quantidade
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="0"
+                    value={matQty}
+                    onChange={(e) => setMatQty(quantityMask(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-extrabold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition text-center"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Data</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    disabled
+                    readOnly
+                    max={new Date().toISOString().split('T')[0]}
+                    value={matDate}
+                    onChange={(e) => setMatDate(e.target.value)}
+                    className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Hora</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    disabled
+                    readOnly
+                    value={matTime}
+                    onChange={(e) => setMatTime(e.target.value)}
+                    className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
+                  />
+                </div>
+              </div>
+
+              {materialModalType === 'SAIDA' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Motivo da Saída</span>
+                  </label>
+                  <select
+                    value={outflowReason}
+                    onChange={(e) => setOutflowReason(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+                  >
+                    <option value="Venda">Venda</option>
+                    <option value="Prejuízo">Prejuízo</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </div>
+              )}
+
+              {(materialModalType === 'ENTRADA' || (materialModalType === 'SAIDA' && (outflowReason === 'Outros' || outflowReason === 'Prejuízo'))) && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Observação / Motivo {materialModalType === 'SAIDA' && (outflowReason === 'Outros' || outflowReason === 'Prejuízo') ? <span className="text-red-500">(Obrigatório)</span> : '(Opcional)'}
+                  </label>
+                  <input
+                    type="text"
+                    required={materialModalType === 'SAIDA' && (outflowReason === 'Outros' || outflowReason === 'Prejuízo')}
+                    placeholder={materialModalType === 'ENTRADA' ? 'Ex: NF #12345 - Compra semanal' : (outflowReason === 'Prejuízo' ? 'Ex: Produto vencido, queimou na chapa...' : 'Ex: Consumo na cozinha / Descarte')}
+                    value={matNotes}
+                    onChange={(e) => setMatNotes(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none transition placeholder-slate-400"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setMaterialModalType(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className={`px-5 py-2.5 text-white font-extrabold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 ${
+                    materialModalType === 'ENTRADA'
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20'
+                      : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 shadow-orange-500/20'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  <span>{materialModalType === 'ENTRADA' ? 'Confirmar Entrada' : 'Confirmar Saída'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };
