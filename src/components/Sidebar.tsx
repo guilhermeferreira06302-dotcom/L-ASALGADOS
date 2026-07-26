@@ -487,15 +487,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5 text-slate-500" />
-                  <span>1. Categoria do Produto / Material</span>
+                  <span>Categoria do Produto</span>
                 </label>
                 <select
                   value={selectedCat}
                   onChange={(e) => {
                     const newCat = e.target.value;
                     setSelectedCat(newCat);
-                    const firstInCat = ingredients.find(i => (i.category || 'INSUMOS GERAIS') === newCat && (materialModalType !== 'SAIDA' || isStockActive(i)));
-                    setSelectedMatId(firstInCat ? firstInCat.id : '');
+                    setSelectedMatId('');
                   }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
                   required
@@ -510,7 +509,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-slate-500" />
-                  <span>2. Nome do Produto / Material</span>
+                  <span>Nome do Produto</span>
                 </label>
                 <select
                   value={selectedMatId}
@@ -523,6 +522,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <option value="">← Selecione a categoria acima primeiro</option>
                   ) : (
                     <>
+                      <option value="">Selecione o produto/material...</option>
                       {availableMaterials.map(mat => (
                         <option key={mat.id} value={mat.id}>
                           {mat.name} — Estoque atual: {mat.currentStock} {mat.unit}

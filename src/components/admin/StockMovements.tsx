@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   ArrowDownRight, ArrowUpRight, Search, Calendar, Filter, History, User,
-  X, ChevronDown
+  X, ChevronDown, FileText
 } from 'lucide-react';
 import { StockMovementType } from '../../types';
 
@@ -11,6 +11,7 @@ export const StockMovements: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | StockMovementType>('ALL');
   const [filterOperator, setFilterOperator] = useState('ALL');
+  const [filterReason, setFilterReason] = useState('ALL');
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -27,6 +28,7 @@ export const StockMovements: React.FC = () => {
   };
 
   const uniqueOperators = Array.from(new Set(stockMovements.map(m => m.operator))).sort();
+  const uniqueReasons = Array.from(new Set(stockMovements.map(m => m.reason))).filter(r => r.trim() !== '').sort();
 
   const filteredMovements = stockMovements.filter(mov => {
     if (filterType !== 'ALL' && mov.type !== filterType) return false;
@@ -36,6 +38,10 @@ export const StockMovements: React.FC = () => {
     }
 
     if (filterOperator !== 'ALL' && mov.operator !== filterOperator) {
+      return false;
+    }
+
+    if (filterReason !== 'ALL' && mov.reason !== filterReason) {
       return false;
     }
 
@@ -80,7 +86,7 @@ export const StockMovements: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-600" />
           <input
             type="text"
-            placeholder="Buscar por produto ou motivo..."
+            placeholder="Buscar por produto ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -302,6 +308,24 @@ export const StockMovements: React.FC = () => {
                 <option value="ALL">Todos os Operadores</option>
                 {uniqueOperators.map(op => (
                   <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {uniqueReasons.length > 0 && (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <FileText className="w-4 h-4 text-slate-500" />
+              </div>
+              <select
+                value={filterReason}
+                onChange={(e) => setFilterReason(e.target.value)}
+                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
+              >
+                <option value="ALL">Todas as Observações</option>
+                {uniqueReasons.map(r => (
+                  <option key={r} value={r} title={r}>{r}</option>
                 ))}
               </select>
             </div>

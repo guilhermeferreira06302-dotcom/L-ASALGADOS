@@ -26,20 +26,20 @@ export const quantityMask = (value: string | number): string => {
   const strVal = String(value);
   const isNegative = strVal.startsWith('-');
   
-  let v = typeof value === 'number' ? Math.round(Math.abs(value) * 1000).toString() : strVal.replace(/\D/g, '');
+  let v = typeof value === 'number' ? Math.round(Math.abs(value)).toString() : strVal.replace(/\D/g, '');
   
-  if (v === '') v = '0';
+  if (v === '') return '';
   
-  const num = (parseInt(v, 10) / 1000).toFixed(3);
-  const masked = num.replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+  // Format with thousand separator as dot (e.g., 1.000)
+  const masked = parseInt(v, 10).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
   return isNegative ? '-' + masked : masked;
 };
 
 export const parseQuantity = (value: string | number): number => {
-  if (typeof value === 'number') return value;
+  if (typeof value === 'number') return Math.round(value);
   const isNegative = value.startsWith('-');
   const v = value.replace(/\D/g, '');
   if (!v) return 0;
-  const num = parseInt(v, 10) / 1000;
+  const num = parseInt(v, 10);
   return isNegative ? -num : num;
 };
