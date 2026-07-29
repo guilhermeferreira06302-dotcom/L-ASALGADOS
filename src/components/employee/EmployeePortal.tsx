@@ -1,57 +1,75 @@
 import React, { useState } from 'react';
-import { POSScreen } from './POSScreen';
-import { QuickStockCheck } from './QuickStockCheck';
-import { ShoppingBag, Package } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { Plus, Minus } from 'lucide-react';
+import { MaterialMovementModal } from '../MaterialMovementModal';
 
-export const EmployeePortal: React.FC<{ initialTab?: string }> = ({ initialTab = 'PDV' }) => {
-  const [activeTab, setActiveTab] = useState<'PDV' | 'ESTOQUE'>('PDV');
+interface EmployeePortalProps {
+  onActionChange?: (action: 'ENTRADA' | 'SAIDA' | null) => void;
+}
+
+export const EmployeePortal: React.FC<EmployeePortalProps> = ({ onActionChange }) => {
   const { currentUser } = useApp();
+  const [materialModalType, setMaterialModalType] = useState<'ENTRADA' | 'SAIDA' | null>(null);
+
+  const handleSetModalType = (type: 'ENTRADA' | 'SAIDA' | null) => {
+    setMaterialModalType(type);
+    if (onActionChange) onActionChange(type);
+  };
+
+  if (materialModalType) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <MaterialMovementModal 
+          type={materialModalType} 
+          onClose={() => handleSetModalType(null)} 
+          isInline={true}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
       
-      {/* Sub Navigation Bar for Employee */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-lg">
-        <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-sm">
-            👨‍🍳
-          </span>
-          <div>
-            <h2 className="font-bold text-lg text-slate-900">Bem-vindo, {currentUser?.name || 'Usuário'}</h2>
-            <p className="text-[11px] text-slate-700">Ambiente do Funcionário (Caixa & Chapa)</p>
+      {/* Cards Separados: Bem-vindo e Botões */}
+      <div className="space-y-4">
+        {/* Card de Boas-vindas */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0">
+              <h2 className="font-extrabold text-xl text-slate-900 truncate">Bem-vindo, {currentUser?.name || 'Usuário'}</h2>
+              <p className="text-xs text-slate-600 font-medium truncate">Ambiente Operacional (Controle de Estoque)</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-          <button
-            onClick={() => setActiveTab('PDV')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition cursor-pointer ${
-              activeTab === 'PDV' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Entrada</span>
-          </button>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-lg">
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => handleSetModalType('ENTRADA')}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-md transition cursor-pointer border border-emerald-600/20 text-center"
+            >
+              <div className="p-1.5 bg-white/20 rounded-md">
+                <Plus className="w-5 h-5 stroke-[3]" />
+              </div>
+              <span>Entrada de Material</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('ESTOQUE')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition cursor-pointer ${
-              activeTab === 'ESTOQUE' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>Conferir Estoque</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => handleSetModalType('SAIDA')}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-extrabold text-sm shadow-md transition cursor-pointer border border-orange-600/20 text-center"
+            >
+              <div className="p-1.5 bg-white/20 rounded-md">
+                <Minus className="w-5 h-5 stroke-[3]" />
+              </div>
+              <span>Saída de Material</span>
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Tab Content */}
-      <div className="pt-2">
-        {activeTab === 'PDV' && <POSScreen onOrderPlaced={() => {}} />}
-        {activeTab === 'ESTOQUE' && <QuickStockCheck />}
-      </div>
-
     </div>
   );
 };
+

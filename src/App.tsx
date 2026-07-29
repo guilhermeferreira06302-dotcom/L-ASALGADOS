@@ -17,6 +17,7 @@ const MainContent: React.FC = () => {
   );
   const [adminTab, setAdminTab] = useState<string>('DASHBOARD');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
 
   // Sync portal toggle when user logs in or switches
   React.useEffect(() => {
@@ -58,8 +59,9 @@ const MainContent: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
         {/* Unified Top Header Bar with Hamburger Button */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
-          <div className="flex items-center gap-3 sm:gap-4">
+        {!(activePortal === 'FUNCIONARIO' && employeeAction !== null) && (
+          <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
+            <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={() => setIsMobileOpen(true)}
               className="p-2.5 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-800 transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center group"
@@ -86,6 +88,7 @@ const MainContent: React.FC = () => {
             </div>
           </div>
         </header>
+      )}
 
         {/* Workspace Content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
@@ -98,7 +101,7 @@ const MainContent: React.FC = () => {
               {adminTab === 'PRODUTOS' && <ProductManagement />}
             </div>
           ) : (
-            <EmployeePortal />
+            <EmployeePortal onActionChange={setEmployeeAction} />
           )}
         </main>
       </div>
