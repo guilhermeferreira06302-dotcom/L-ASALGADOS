@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   ArrowDownRight, ArrowUpRight, Search, Calendar, Filter, History, User,
-  X, ChevronDown, FileText
+  X, ChevronDown, FileText, Camera
 } from 'lucide-react';
 import { StockMovementType } from '../../types';
 
@@ -20,6 +20,8 @@ export const StockMovements: React.FC = () => {
   const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -28,7 +30,7 @@ export const StockMovements: React.FC = () => {
   };
 
   const uniqueOperators = Array.from(new Set(stockMovements.map(m => m.operator))).sort();
-  const uniqueReasons = Array.from(new Set(stockMovements.map(m => m.reason))).filter(r => r.trim() !== '').sort();
+  const uniqueReasons = Array.from(new Set(stockMovements.map(m => m.reason))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
 
   const filteredMovements = stockMovements.filter(mov => {
     if (filterType !== 'ALL' && mov.type !== filterType) return false;
@@ -67,19 +69,6 @@ export const StockMovements: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 p-6 rounded-3xl border border-slate-200 shadow-xl">
-        <div>
-          <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-            <History className="w-6 h-6 text-blue-400" />
-            <span>Histórico de Movimentação</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Acompanhe todas as entradas, saídas e ajustes de estoque em tempo real.
-          </p>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative flex-1">
@@ -323,7 +312,7 @@ export const StockMovements: React.FC = () => {
                 onChange={(e) => setFilterReason(e.target.value)}
                 className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
               >
-                <option value="ALL">Todas as Observações</option>
+                <option value="ALL">Todos os Motivos</option>
                 {uniqueReasons.map(r => (
                   <option key={r} value={r} title={r}>{r}</option>
                 ))}
@@ -341,16 +330,17 @@ export const StockMovements: React.FC = () => {
               <tr>
                 <th className="py-3.5 px-5">Data e Hora</th>
                 <th className="py-3.5 px-5">Operação</th>
-                <th className="py-3.5 px-5">Produto / Insumo</th>
+                <th className="py-3.5 px-5">Produto</th>
                 <th className="py-3.5 px-5">Quantidade</th>
-                <th className="py-3.5 px-5">Motivo / Observação</th>
+                <th className="py-3.5 px-5">Motivo</th>
+                <th className="py-3.5 px-5">Observação</th>
                 <th className="py-3.5 px-5">Operador</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500 text-sm">
+                  <td colSpan={7} className="py-8 text-center text-slate-500 text-sm">
                     Nenhuma movimentação encontrada para os filtros aplicados.
                   </td>
                 </tr>
@@ -380,8 +370,23 @@ export const StockMovements: React.FC = () => {
                       </span>
                       <span className="text-slate-500 text-[11px] ml-1 uppercase">{mov.unit}</span>
                     </td>
-                    <td className="py-3.5 px-5 text-xs text-slate-700 max-w-xs truncate" title={mov.reason}>
+                    <td className="py-3.5 px-5 text-xs text-slate-700 font-bold max-w-[120px] truncate" title={mov.reason}>
                       {mov.reason}
+                    </td>
+                    <td className="py-3.5 px-5 text-xs text-slate-500 max-w-[150px] truncate" title={mov.observation || 'Sem observação'}>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{mov.observation || 'Sem observação'}</span>
+                        {mov.photo && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingPhoto(mov.photo as string)}
+                            className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition shadow-sm flex-shrink-0"
+                            title="Ver foto do prejuízo"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-5">
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs whitespace-nowrap shadow-2xs">
@@ -398,6 +403,27 @@ export const StockMovements: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal to View Photo */}
+      {viewingPhoto && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-2 max-w-2xl w-full shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setViewingPhoto(null)}
+              className="absolute -top-3 -right-3 bg-white text-slate-500 hover:text-slate-800 p-2 rounded-full shadow-lg transition cursor-pointer hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center min-h-[300px]">
+              <img src={viewingPhoto} alt="Evidência do Prejuízo" className="w-full h-auto max-h-[80vh] object-contain" />
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-sm font-bold text-slate-700">Evidência Fotográfica do Prejuízo</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -29,7 +29,7 @@ interface AppContextType {
   // Stock / Ingredient actions
   addIngredient: (ing: Omit<Ingredient, 'id' | 'lastUpdated'>) => void;
   updateIngredient: (ing: Ingredient) => void;
-  adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string) => void;
+  adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string) => void;
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
   // Order actions
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Order;
@@ -96,6 +96,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Failed to parse localStorage data', e);
       }
     }
+  }, []);
+
+  // Sync data across multiple tabs/windows in real-time
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed.ingredients) {
+            const catMap: Record<string, string> = {
+              'PÃES & MASSAS': 'BURGER',
+              'CARNES & FRIOS': 'BURGER',
+              'LATICÍNIOS & QUEIJOS': 'BURGER',
+              'HORTIFRUTI': 'BURGER',
+              'MOLHOS & CONDIMENTOS': 'BURGER',
+              'CONGELADOS & PORÇÕES': 'PORCAO',
+              'MERCEARIA & ÓLEOS': 'PORCAO',
+              'BEBIDAS': 'BEBIDA'
+            };
+            setIngredients(parsed.ingredients.map((ing: Ingredient) => ({
+              ...ing,
+              unit: 'un' as const,
+              category: (ing.category && catMap[ing.category]) ? catMap[ing.category] : (ing.category || 'BURGER')
+            })));
+          }
+          if (parsed.products) setProducts(parsed.products);
+          if (parsed.orders) setOrders(parsed.orders);
+          if (parsed.transactions) setTransactions(parsed.transactions);
+          if (parsed.audits) setAudits(parsed.audits);
+          if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
+          if (parsed.customCategories && parsed.customCategories.length > 0) {
+            setCustomCategories(parsed.customCategories);
+          }
+        } catch (e) {
+          console.error('Failed to sync from other tab', e);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Save to LocalStorage
@@ -241,7 +282,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIngredients(prev => prev.map(i => i.id === updated.id ? { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : (i.hasReceivedEntry ?? (updated.currentStock > 0)) } : i));
   };
 
-  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string) => {
+  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string) => {
     const targetIng = ingredients.find(i => i.id === ingredientId);
     if (targetIng) {
       const movement: StockMovement = {
@@ -252,8 +293,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         quantity: Math.abs(quantityChange),
         unit: targetIng.unit,
         reason: reason || 'Ajuste manual',
+        observation: observation || 'Sem observação',
         operator: operatorName || currentUser?.name || 'Sistema',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        photo
       };
       setStockMovements(m => [movement, ...m]);
     }
@@ -282,6 +325,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           category: 'FORNECEDOR',
           amount: quantityChange * ing.costPerUnit,
           description: `Reposição de Estoque: ${ing.name} (${quantityChange} ${ing.unit})`
+        });
+      }
+    }
+
+    // Automatically create a financial loss record if reason is "Prejuízo"
+    if (quantityChange < 0 && reason === 'Prejuízo') {
+      const ing = ingredients.find(i => i.id === ingredientId);
+      if (ing) {
+        let unitValue = ing.costPerUnit;
+        if (ing.id.startsWith('ing-prod-')) {
+          const originalProdId = ing.id.replace('ing-prod-', '');
+          const originalProd = products.find(p => p.id === originalProdId);
+          if (originalProd) {
+            // Using price (valor do produto cadastrado) as requested, or costPrice if more appropriate. 
+            // The user said "valor do produto cadastrado", which usually implies the sale price.
+            unitValue = originalProd.price > 0 ? originalProd.price : (originalProd.costPrice || 0);
+          }
+        }
+
+        addTransaction({
+          date: new Date().toISOString().split('T')[0],
+          type: 'SAIDA',
+          category: 'PREJUIZO',
+          amount: Math.abs(quantityChange) * unitValue,
+          description: `Prejuízo de Estoque: ${ing.name} (${Math.abs(quantityChange)} ${ing.unit})`
         });
       }
     }
@@ -345,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (newStatus === 'ENTREGUE' && targetOrder.status !== 'ENTREGUE') {
       targetOrder.items.forEach(item => {
         const targetIngId = `ing-prod-${item.productId}`;
-        adjustStock(targetIngId, -item.quantity, `Venda Pedido #${targetOrder.orderNumber}`);
+        adjustStock(targetIngId, -item.quantity, 'Venda', undefined, `Pedido #${targetOrder.orderNumber}`);
       });
     }
 

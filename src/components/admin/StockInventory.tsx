@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Ingredient, isStockActive } from '../../types';
+import { Ingredient, isStockActive, Product } from '../../types';
 import { 
   Package, AlertTriangle, RefreshCw, 
   Search, ClipboardCheck, Sparkles, CheckCircle2,
   Calendar, X, ChevronDown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { quantityMask, parseQuantity } from '../../utils/masks';
 
 export const StockInventory: React.FC = () => {
   const { ingredients, products, adjustStock, performInventoryAudit, audits, currentUser, customCategories } = useApp();

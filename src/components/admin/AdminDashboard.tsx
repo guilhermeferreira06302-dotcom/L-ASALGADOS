@@ -55,7 +55,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
     { hour: '22h', pedidos: 45 },
   ];
 
-  const topProducts = [...products].sort((a,b) => b.salesCountMonthly - a.salesCountMonthly).slice(0, 4);
+  const topProducts = [...products].sort((a,b) => b.salesCountMonthly - a.salesCountMonthly).slice(0, 6);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -239,9 +239,6 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
               const marginPct = ((profitPerUnit / prod.price) * 100).toFixed(0);
               return (
                 <div key={prod.id} className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50/60 border border-slate-200/80 hover:border-slate-300 transition">
-                  <span className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center text-xs">
-                    #{idx + 1}
-                  </span>
                   <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900 truncate">{prod.name}</p>

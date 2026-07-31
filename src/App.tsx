@@ -7,6 +7,7 @@ import { FinancialAnalysis } from './components/admin/FinancialAnalysis';
 import { StockInventory } from './components/admin/StockInventory';
 import { ProductManagement } from './components/admin/ProductManagement';
 import { StockMovements } from './components/admin/StockMovements';
+import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { EmployeePortal } from './components/employee/EmployeePortal';
 import { Menu } from 'lucide-react';
 
@@ -35,6 +36,7 @@ const MainContent: React.FC = () => {
     switch (adminTab) {
       case 'DASHBOARD': return 'Visão Geral & Gráficos de Desempenho';
       case 'FINANCEIRO': return 'Inteligência Financeira & Fluxo de Caixa';
+      case 'RECEITAS_DESPESAS': return 'Receitas / Despesas';
       case 'ESTOQUE': return 'Controle de Estoque & Fichas Técnicas';
       case 'MOVIMENTACAO': return 'Histórico de Movimentações';
       case 'PRODUTOS': return 'Gestão de Cardápio & Insumos por Produto';
@@ -96,6 +98,7 @@ const MainContent: React.FC = () => {
             <div className="space-y-6">
               {adminTab === 'DASHBOARD' && <AdminDashboard onNavigateTab={setAdminTab} />}
               {adminTab === 'FINANCEIRO' && <FinancialAnalysis />}
+              {adminTab === 'RECEITAS_DESPESAS' && <ReceitasDespesas />}
               {adminTab === 'ESTOQUE' && <StockInventory />}
               {adminTab === 'MOVIMENTACAO' && <StockMovements />}
               {adminTab === 'PRODUTOS' && <ProductManagement />}

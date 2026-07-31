@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   Shield, ChefHat, LayoutDashboard, DollarSign, Package, Utensils,
   Bell, AlertTriangle, CheckCircle2, RotateCcw, LogOut, X,
-  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag
+  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { quantityMask, parseQuantity } from '../utils/masks';
@@ -142,30 +142,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               <button
-                onClick={() => handleTabClick('DASHBOARD')}
+                onClick={() => handleTabClick('PRODUTOS')}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  adminTab === 'DASHBOARD'
-                    ? 'bg-gradient-to-r from-amber-500/15 to-amber-500/5 text-amber-400 border-l-4 border-amber-500 shadow-xs'
+                  adminTab === 'PRODUTOS'
+                    ? 'bg-gradient-to-r from-white/15 to-white/5 text-slate-900 border-l-4 border-white shadow-xs'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <LayoutDashboard className={`w-4 h-4 ${adminTab === 'DASHBOARD' ? 'text-amber-400' : 'text-slate-700'}`} />
-                  <span>Dashboard & Gráficos</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleTabClick('FINANCEIRO')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  adminTab === 'FINANCEIRO'
-                    ? 'bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 text-emerald-400 border-l-4 border-emerald-500 shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <DollarSign className={`w-4 h-4 ${adminTab === 'FINANCEIRO' ? 'text-emerald-400' : 'text-slate-700'}`} />
-                  <span>Análise Financeira</span>
+                  <Utensils className={`w-4 h-4 ${adminTab === 'PRODUTOS' ? 'text-slate-900' : 'text-slate-700'}`} />
+                  <span>Cadastrar Produtos</span>
                 </div>
               </button>
 
@@ -181,11 +167,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Package className={`w-4 h-4 ${adminTab === 'ESTOQUE' ? 'text-purple-400' : 'text-slate-700'}`} />
                   <span>Estoque</span>
                 </div>
-                {lowStockItems.length > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-extrabold">
-                    {lowStockItems.length}
-                  </span>
-                )}
               </button>
 
               {/* Sub-actions for Estoque in Sidebar */}
@@ -224,21 +205,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <RotateCcw className={`w-4 h-4 ${adminTab === 'MOVIMENTACAO' ? 'text-blue-500' : 'text-slate-700'}`} />
-                  <span>Movimentação</span>
+                  <span>Movimentação estoque</span>
                 </div>
               </button>
 
               <button
-                onClick={() => handleTabClick('PRODUTOS')}
+                onClick={() => handleTabClick('FINANCEIRO')}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  adminTab === 'PRODUTOS'
-                    ? 'bg-gradient-to-r from-white/15 to-white/5 text-slate-900 border-l-4 border-white shadow-xs'
+                  adminTab === 'FINANCEIRO'
+                    ? 'bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 text-emerald-400 border-l-4 border-emerald-500 shadow-xs'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Utensils className={`w-4 h-4 ${adminTab === 'PRODUTOS' ? 'text-slate-900' : 'text-slate-700'}`} />
-                  <span>Cadastrar Produtos</span>
+                  <DollarSign className={`w-4 h-4 ${adminTab === 'FINANCEIRO' ? 'text-emerald-400' : 'text-slate-700'}`} />
+                  <span>Análise Financeira</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleTabClick('DASHBOARD')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  adminTab === 'DASHBOARD'
+                    ? 'bg-gradient-to-r from-amber-500/15 to-amber-500/5 text-amber-400 border-l-4 border-amber-500 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <LayoutDashboard className={`w-4 h-4 ${adminTab === 'DASHBOARD' ? 'text-amber-400' : 'text-slate-700'}`} />
+                  <span>Dashboard & Gráficos</span>
                 </div>
               </button>
             </div>

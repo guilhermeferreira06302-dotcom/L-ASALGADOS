@@ -24,6 +24,7 @@ export interface Ingredient {
   supplier: string;
   operator?: string;
   hasReceivedEntry?: boolean;
+  lastUpdated?: string;
 }
 
 export const isStockActive = (ing: Ingredient): boolean => {
@@ -81,7 +82,7 @@ export interface Order {
 }
 
 export type TransactionType = 'ENTRADA' | 'SAIDA';
-export type TransactionCategory = 'VENDAS' | 'FORNECEDOR' | 'SALARIO' | 'MANUTENCAO' | 'IMPOSTOS' | 'OUTROS';
+export type TransactionCategory = 'VENDAS' | 'FORNECEDOR' | 'SALARIO' | 'MANUTENCAO' | 'IMPOSTOS' | 'PREJUIZO' | 'OUTROS';
 
 export interface FinancialTransaction {
   id: string;
@@ -119,6 +120,8 @@ export interface StockMovement {
   quantity: number;
   unit: string;
   reason: string;
+  observation?: string;
   operator: string;
   date: string; // ISO string for easy sorting/filtering
+  photo?: string;
 }
