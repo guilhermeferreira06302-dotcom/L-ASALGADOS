@@ -60,40 +60,66 @@ export const FinancialAnalysis: React.FC = () => {
     return true;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const totalIn = filtered
+  const manualIn = filtered
     .filter(t => t.type === 'ENTRADA')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalLoss = filtered
+  // Filter stock movements by the same date range if needed
+  const filteredMovements = stockMovements.filter(m => {
+    if (dateFilterMode === 'EXACT' && exactDate) {
+      if (m.date.split('T')[0] !== exactDate) return false;
+    }
+    if (dateFilterMode === 'RANGE' && startDate && endDate) {
+      if (m.date.split('T')[0] < startDate || m.date.split('T')[0] > endDate) return false;
+    }
+    return true;
+  });
+
+  const stockSales = filteredMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
+    .reduce((sum, m) => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return sum + ((prod?.price || 0) * m.quantity);
+    }, 0);
+
+  const totalIn = manualIn + stockSales;
+
+  const manualLoss = filtered
     .filter(t => t.type === 'SAIDA' && t.category === 'PREJUIZO')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Manual OUT transactions, excluding 'PREJUIZO'
+  const stockLoss = filteredMovements
+    .filter(m => m.type === 'SAIDA' && (m.reason === 'Prejuízo' || m.paymentMethod === 'Prejuízo'))
+    .reduce((sum, m) => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return sum + ((prod?.costPrice || 0) * m.quantity);
+    }, 0);
+
+  const totalLoss = manualLoss + stockLoss;
+
   const manualOut = filtered
     .filter(t => t.type === 'SAIDA' && t.category !== 'PREJUIZO')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Cost of Goods Sold (COGS) -> Custo dos produtos vendidos baseados nas transações de ENTRADA do tipo VENDAS
-  const productCosts = filtered
-    .filter(t => t.type === 'ENTRADA' && t.category === 'VENDAS' && t.relatedOrderId)
-    .reduce((sum, tx) => {
-      const order = orders.find(o => o.id === tx.relatedOrderId);
-      if (!order) return sum;
-      
-      const orderCost = order.items.reduce((itemSum, item) => {
-        const product = products.find(p => p.id === item.productId);
-        // Fallback to 0 if product is missing or doesn't have a cost
-        return itemSum + ((product?.costPrice || 0) * item.quantity);
-      }, 0);
-
-      return sum + orderCost;
+  const stockCogs = filteredMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Prejuízo')
+    .reduce((sum, m) => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return sum + ((prod?.costPrice || 0) * m.quantity);
     }, 0);
 
-  // Total de Saídas is the sum of manual expenses + cost of the products sold
-  const totalOut = manualOut + productCosts;
+  const saldoPendente = filteredMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
+    .reduce((sum, m) => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return sum + ((prod?.price || 0) * m.quantity);
+    }, 0);
 
-  // Saldo Operacional = Faturamento - (Total de Saídas + Prejuízos)
-  const balance = totalIn - (totalOut + totalLoss);
+  const balance = totalIn - (manualOut + stockCogs) - totalLoss;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,7 +160,7 @@ export const FinancialAnalysis: React.FC = () => {
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-5 rounded-3xl bg-white border border-slate-200">
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Faturamento</span>
@@ -148,13 +174,13 @@ export const FinancialAnalysis: React.FC = () => {
 
         <div className="p-5 rounded-3xl bg-white border border-slate-200">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold uppercase tracking-wider text-red-400">Total de Saídas</span>
-            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-orange-400">Saldo Pendente</span>
+            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
               <ArrowDownRight className="w-4 h-4" />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalOut.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-          <p className="text-[11px] text-slate-700 mt-1">Valor total de saídas descontadas</p>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          <p className="text-[11px] text-slate-700 mt-1">Valor total de vendas no fiado</p>
         </div>
 
         <div className="p-5 rounded-3xl bg-white border border-slate-200">
@@ -168,18 +194,7 @@ export const FinancialAnalysis: React.FC = () => {
           <p className="text-[11px] text-slate-700 mt-1">Perdas e descartes do período</p>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white border border-slate-200">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Saldo Operacional</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
-              <CheckCircle className="w-4 h-4" />
-            </div>
-          </div>
-          <h3 className={`text-2xl font-extrabold mt-2 ${balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </h3>
-          <p className="text-[11px] text-slate-700 mt-1">Lucro com as saídas descontadas</p>
-        </div>
+
       </div>
 
       {/* Filters */}

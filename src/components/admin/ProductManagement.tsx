@@ -37,9 +37,10 @@ export const ProductManagement: React.FC = () => {
   const [available, setAvailable] = useState(true);
 
   const openAddModal = () => {
+    const availableCats = Array.from(new Set([...(customCategories || [])])).filter(c => c && c !== 'OUTROS' && c !== 'GERAL').sort();
     setEditingProd(null);
     setName('');
-    setCategory('BURGER');
+    setCategory(availableCats.length > 0 ? availableCats[0] : '');
     setCustomCategoryName('');
     setPrice('');
     setImage('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80');

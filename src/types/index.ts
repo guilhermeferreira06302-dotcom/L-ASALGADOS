@@ -3,7 +3,7 @@ export type UserRole = 'ADMIN' | 'FUNCIONARIO';
 export interface User {
   id: string;
   name: string;
-  email: string;
+  password?: string;
   role: UserRole;
   avatar: string;
   shift?: 'Manhã' | 'Tarde / Noite' | 'Madrugada';
@@ -118,6 +118,7 @@ export interface StockMovement {
   unit: string;
   reason: string;
   observation?: string;
+  paymentMethod?: string;
   operator: string;
   date: string; // ISO string for easy sorting/filtering
   photo?: string;

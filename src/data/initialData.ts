@@ -4,7 +4,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-1',
     name: 'Carlos Mendes',
-    email: 'carlos@lanchonete.com',
+    password: '123456',
     role: 'ADMIN',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     position: 'Sócio Gerente'
@@ -12,7 +12,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-2',
     name: 'Mariana Silva',
-    email: 'mariana@lanchonete.com',
+    password: '123456',
     role: 'FUNCIONARIO',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     shift: 'Tarde / Noite',
@@ -21,7 +21,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-3',
     name: 'Roberto Chaves',
-    email: 'roberto@lanchonete.com',
+    password: '123456',
     role: 'FUNCIONARIO',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     shift: 'Tarde / Noite',

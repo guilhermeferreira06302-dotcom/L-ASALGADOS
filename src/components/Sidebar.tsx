@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   Shield, ChefHat, LayoutDashboard, DollarSign, Package, Utensils,
   Bell, AlertTriangle, CheckCircle2, RotateCcw, LogOut, X,
-  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet
+  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet, TrendingUp, Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { quantityMask, parseQuantity } from '../utils/masks';
@@ -104,36 +104,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Portal Switcher Card */}
-        <div className="p-4 border-b border-slate-200/80 bg-slate-50/40">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 block mb-2">
-            Módulo Operacional
-          </label>
-          <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button
-              onClick={() => handlePortalSwitch('ADMIN')}
-              className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activePortal === 'ADMIN'
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>Admin</span>
-            </button>
-            <button
-              onClick={() => handlePortalSwitch('FUNCIONARIO')}
-              className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activePortal === 'FUNCIONARIO'
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-              }`}
-            >
-              <ChefHat className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>PDV / Loja</span>
-            </button>
+        {/* Portal Switcher Card (Only for Admins) */}
+        {currentUser.role === 'ADMIN' && (
+          <div className="p-4 border-b border-slate-200/80 bg-slate-50/40">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 block mb-2">
+              Módulo Operacional
+            </label>
+            <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <button
+                onClick={() => handlePortalSwitch('ADMIN')}
+                className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activePortal === 'ADMIN'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Admin</span>
+              </button>
+              <button
+                onClick={() => handlePortalSwitch('FUNCIONARIO')}
+                className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activePortal === 'FUNCIONARIO'
+                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 shadow-sm'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
+                }`}
+              >
+                <ChefHat className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>PDV / Loja</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Static Module Name for Employees */}
+        {currentUser.role !== 'ADMIN' && (
+          <div className="p-4 border-b border-slate-200/80 bg-slate-50/40">
+            <div className="flex items-center gap-2 text-emerald-600 font-bold bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20">
+              <ChefHat className="w-4 h-4" />
+              <span className="text-sm">Terminal PDV</span>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Navigation Menu */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
@@ -250,8 +262,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <LayoutDashboard className={`w-4 h-4 ${adminTab === 'DASHBOARD' ? 'text-amber-400' : 'text-slate-700'}`} />
-                  <span>Dashboard & Gráficos</span>
+                  <TrendingUp className={`w-4 h-4 ${adminTab === 'DASHBOARD' ? 'text-amber-400' : 'text-slate-700'}`} />
+                  <span>Dashboard (Admin)</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleTabClick('ACESSOS')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  adminTab === 'ACESSOS'
+                    ? 'bg-gradient-to-r from-red-500/15 to-red-500/5 text-red-500 border-l-4 border-red-500 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Lock className={`w-4 h-4 ${adminTab === 'ACESSOS' ? 'text-red-500' : 'text-slate-700'}`} />
+                  <span>Acessos</span>
                 </div>
               </button>
             </div>
@@ -376,19 +402,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {showUserMenu && (
               <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-slate-300 rounded-2xl shadow-2xl py-1.5 z-50 text-xs">
-                <button
-                  onClick={() => {
-                    if (confirm('Deseja resetar os dados iniciais de demonstração (pedidos, estoque e transações)?')) {
-                      resetToDefaultData();
-                      setShowUserMenu(false);
-                    }
-                  }}
-                  className="w-full text-left px-3.5 py-2 text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Resetar Dados de Demo</span>
-                </button>
-
                 <button
                   onClick={logout}
                   className="w-full text-left px-3.5 py-2 text-red-400 hover:bg-red-950/40 flex items-center gap-2 transition cursor-pointer rounded-b-xl"

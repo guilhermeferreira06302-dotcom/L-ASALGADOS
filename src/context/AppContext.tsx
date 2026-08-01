@@ -8,6 +8,7 @@ import {
   INITIAL_ORDERS, INITIAL_TRANSACTIONS, INITIAL_AUDITS 
 } from '../data/initialData';
 import { GoogleGenAI } from '@google/genai';
+import { supabase } from '../lib/supabase';
 
 interface AppContextType {
   currentUser: User | null;
@@ -18,10 +19,13 @@ interface AppContextType {
   transactions: FinancialTransaction[];
   audits: InventoryAudit[];
   stockMovements: StockMovement[];
-  login: (email: string, role?: UserRole) => boolean;
+  login: (name: string, password?: string) => boolean;
   loginAsUser: (user: User) => void;
   logout: () => void;
   switchRole: (role: UserRole) => void;
+  updateUser: (user: User) => void;
+  addUser: (user: Omit<User, 'id'>) => void;
+  deleteUser: (id: string) => void;
   // Product actions
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
@@ -29,7 +33,7 @@ interface AppContextType {
   // Stock / Ingredient actions
   addIngredient: (ing: Omit<Ingredient, 'id' | 'lastUpdated'>) => void;
   updateIngredient: (ing: Ingredient) => void;
-  adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string) => void;
+  adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => void;
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
   // Order actions
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Order;
@@ -57,7 +61,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]); // default Carlos Mendes (Admin)
-  const [users] = useState<User[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
@@ -68,12 +72,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
-  // Load from LocalStorage
+  // Load from LocalStorage and Cloud
   useEffect(() => {
+    // 1. Carrega o cache local para a interface ser instantânea
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        if (parsed.users) setUsers(parsed.users);
         if (parsed.ingredients) {
           const catMap: Record<string, string> = {
             'PÃES & MASSAS': 'BURGER',
@@ -109,6 +115,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Failed to parse localStorage data', e);
       }
     }
+
+    // 2. Busca a versão mais atualizada da Nuvem (Supabase)
+    const loadCloudData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', STORAGE_KEY)
+          .single();
+          
+        if (data && data.value) {
+          const parsed = data.value;
+          if (parsed.users) setUsers(parsed.users);
+          if (parsed.ingredients) setIngredients(parsed.ingredients);
+          if (parsed.products) setProducts(parsed.products);
+          if (parsed.orders) setOrders(parsed.orders);
+          if (parsed.transactions) setTransactions(parsed.transactions);
+          if (parsed.audits) setAudits(parsed.audits);
+          if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
+          if (parsed.customCategories) setCustomCategories(parsed.customCategories);
+          if (parsed.currentShift !== undefined) setCurrentShift(parsed.currentShift);
+          if (parsed.shifts) setShifts(parsed.shifts);
+          
+          // Atualiza também o local storage com os dados da nuvem
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
+      } catch (err) {
+        console.error('Erro silencioso ao buscar dados da nuvem', err);
+      }
+    };
+    
+    loadCloudData();
   }, []);
 
   // Sync data across multiple tabs/windows in real-time
@@ -117,6 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
+          if (parsed.users) setUsers(parsed.users);
           if (parsed.ingredients) {
             const catMap: Record<string, string> = {
               'PÃES & MASSAS': 'BURGER',
@@ -158,9 +197,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Save to LocalStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const stateToSave = {
+      users,
       ingredients,
       products,
       orders,
@@ -170,8 +209,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customCategories,
       currentShift,
       shifts
-    }));
-  }, [ingredients, products, orders, transactions, audits, stockMovements, customCategories, currentShift, shifts]);
+    };
+
+    // 1. Salvar no armazenamento local (offline-first, rápido)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+
+    // 2. Sincronizar na nuvem Supabase em background
+    // Usa um timeout para não enviar excesso de requisições enquanto o usuário digita/clica rápido (Debounce)
+    const timeoutId = setTimeout(() => {
+      supabase.from('app_settings').upsert(
+        { key: STORAGE_KEY, value: stateToSave },
+        { onConflict: 'key' }
+      ).then(({ error }) => {
+        if (error) console.error('Erro de sincronização Supabase:', error);
+      });
+    }, 1500);
+
+    return () => clearTimeout(timeoutId);
+  }, [users, ingredients, products, orders, transactions, audits, stockMovements, customCategories, currentShift, shifts]);
 
   // Cruzamento estrito: A aba de Estoque (ingredients) deve conter APENAS o que está cadastrado na aba de Produtos
   useEffect(() => {
@@ -242,22 +297,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [products, currentUser?.name]);
 
-  const login = (email: string, role?: UserRole): boolean => {
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const login = (name: string, password?: string): boolean => {
+    const found = users.find(u => u.name.toLowerCase() === name.toLowerCase());
+    
+    // Quick login for demo (passwordless) if no password provided by UI (quick access buttons)
+    // BUT the new requirement is to actually validate password if it's provided.
     if (found) {
+      if (password !== undefined) {
+        if (found.password === password) {
+          setCurrentUser(found);
+          return true;
+        }
+        return false;
+      }
+      
+      // Quick login fallback
       setCurrentUser(found);
       return true;
     }
-    // Fallback: create mock session
+    return false;
+  };
+
+  const updateUser = (updatedUser: User) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    if (currentUser?.id === updatedUser.id) {
+      setCurrentUser(updatedUser);
+    }
+  };
+
+  const addUser = (userData: Omit<User, 'id'>) => {
     const newUser: User = {
-      id: `usr-${Date.now()}`,
-      name: email.split('@')[0] || 'Usuário',
-      email,
-      role: role || 'FUNCIONARIO',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+      ...userData,
+      id: `usr-${Date.now()}`
     };
-    setCurrentUser(newUser);
-    return true;
+    setUsers(prev => [...prev, newUser]);
+  };
+
+  const deleteUser = (id: string) => {
+    if (currentUser?.id === id) {
+      alert("Você não pode excluir o seu próprio acesso atual.");
+      return;
+    }
+    setUsers(prev => prev.filter(u => u.id !== id));
   };
 
   const loginAsUser = (user: User) => {
@@ -303,7 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIngredients(prev => prev.map(i => i.id === updated.id ? { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : (i.hasReceivedEntry ?? (updated.currentStock > 0)) } : i));
   };
 
-  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string) => {
+  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => {
     const targetIng = ingredients.find(i => i.id === ingredientId);
     if (targetIng) {
       const movement: StockMovement = {
@@ -315,6 +396,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unit: targetIng.unit,
         reason: reason || 'Ajuste manual',
         observation: observation || 'Sem observação',
+        paymentMethod,
         operator: operatorName || currentUser?.name || 'Sistema',
         date: new Date().toISOString(),
         photo
@@ -605,6 +687,9 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         loginAsUser,
         logout,
         switchRole,
+        updateUser,
+        addUser,
+        deleteUser,
         addProduct,
         updateProduct,
         deleteProduct,

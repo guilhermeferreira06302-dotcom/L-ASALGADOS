@@ -13,20 +13,53 @@ import {
 export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> = ({ onNavigateTab }) => {
   const { transactions, ingredients, products, orders, stockMovements } = useApp();
 
-  // Financial KPIs
-  const inflow = transactions.filter(t => t.type === 'ENTRADA').reduce((s, t) => s + t.amount, 0);
-  const outflow = transactions.filter(t => t.type === 'SAIDA').reduce((s, t) => s + t.amount, 0);
-  const netProfit = inflow - outflow;
-  const margin = inflow > 0 ? ((netProfit / inflow) * 100).toFixed(1) : '0';
+  // Helper to get product price and cost
+  const getProductPrice = (ingredientId: string) => {
+    const prodId = ingredientId.replace('ing-prod-', '');
+    const prod = products.find(p => p.id === prodId);
+    return prod?.price || 0;
+  };
+  const getProductCost = (ingredientId: string) => {
+    const prodId = ingredientId.replace('ing-prod-', '');
+    const prod = products.find(p => p.id === prodId);
+    return prod?.costPrice || 0;
+  };
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-  const weeklyTransactions = transactions.filter(t => t.date >= sevenDaysAgoStr);
-  const weeklyInflow = weeklyTransactions.filter(t => t.type === 'ENTRADA').reduce((s, t) => s + t.amount, 0);
-  const weeklyOutflow = weeklyTransactions.filter(t => t.type === 'SAIDA').reduce((s, t) => s + t.amount, 0);
-  const weeklyNetProfit = weeklyInflow - weeklyOutflow;
-  const weeklyMargin = weeklyInflow > 0 ? ((weeklyNetProfit / weeklyInflow) * 100).toFixed(1) : '0';
+  // Financial KPIs (All time)
+  const manualIn = transactions.filter(t => t.type === 'ENTRADA').reduce((s, t) => s + t.amount, 0);
+  const stockSales = stockMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
+    .reduce((sum, m) => sum + (getProductPrice(m.ingredientId) * m.quantity), 0);
+  const totalInflow = manualIn + stockSales;
+
+  // Date thresholds for Current Month
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const startOfMonthStr = `${year}-${month}-01`;
+  
+  // Financial KPIs (Monthly)
+  const monthlyManualIn = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'ENTRADA').reduce((s, t) => s + t.amount, 0);
+  const monthlyStockSales = stockMovements
+    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
+    .reduce((sum, m) => sum + (getProductPrice(m.ingredientId) * m.quantity), 0);
+  const monthlyInflow = monthlyManualIn + monthlyStockSales;
+
+  const monthlyManualOut = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'SAIDA' && t.category !== 'PREJUIZO').reduce((s, t) => s + t.amount, 0);
+  const monthlyStockCogs = stockMovements
+    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Prejuízo')
+    .reduce((sum, m) => sum + (getProductCost(m.ingredientId) * m.quantity), 0);
+  
+  const monthlyManualLoss = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'SAIDA' && t.category === 'PREJUIZO').reduce((s, t) => s + t.amount, 0);
+  const monthlyStockLoss = stockMovements
+    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && (m.reason === 'Prejuízo' || m.paymentMethod === 'Prejuízo'))
+    .reduce((sum, m) => sum + (getProductCost(m.ingredientId) * m.quantity), 0);
+
+  const monthlySaldoPendente = stockMovements
+    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
+    .reduce((sum, m) => sum + (getProductPrice(m.ingredientId) * m.quantity), 0);
+
+  const monthlyNetProfit = monthlyInflow - (monthlyManualOut + monthlyStockCogs) - (monthlyManualLoss + monthlyStockLoss);
 
   const lowStockItems = ingredients.filter(i => isStockActive(i) && i.currentStock <= i.minStock);
   const thirtyDaysAgo = new Date();
@@ -58,20 +91,41 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   const orderCountForTicket = monthlyUniqueOrders.size > 0 ? monthlyUniqueOrders.size : 1;
   const averageTicket = monthlyProductOutflowQuantity > 0 ? (monthlyProductOutflowValue / orderCountForTicket) : 0;
 
-  // Hourly rush data
-  const hourlyRushData = [
-    { hour: '11h', pedidos: 15 },
-    { hour: '12h', pedidos: 42 },
-    { hour: '13h', pedidos: 38 },
-    { hour: '14h', pedidos: 18 },
-    { hour: '18h', pedidos: 28 },
-    { hour: '19h', pedidos: 65 },
-    { hour: '20h', pedidos: 84 },
-    { hour: '21h', pedidos: 78 },
-    { hour: '22h', pedidos: 45 },
-  ];
-
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const sevenDaysAgoFullISO = sevenDaysAgo.toISOString();
+
+  // Hourly rush data (7-day average, dynamic hours starting at 03:00)
+  const hourlyCounts: Record<number, number> = {};
+
+  stockMovements.forEach(movement => {
+    if (movement.type === 'SAIDA' && movement.reason !== 'Prejuízo' && movement.date >= sevenDaysAgoFullISO) {
+      const dateObj = new Date(movement.date);
+      const hour = dateObj.getHours();
+      hourlyCounts[hour] = (hourlyCounts[hour] || 0) + movement.quantity;
+    }
+  });
+
+  const dynamicHours = Object.keys(hourlyCounts).map(Number);
+  // Order hours considering business day starts at 3 AM
+  dynamicHours.sort((a, b) => {
+    const aAdjusted = a >= 3 ? a : a + 24;
+    const bAdjusted = b >= 3 ? b : b + 24;
+    return aAdjusted - bAdjusted;
+  });
+
+  const hourlyRushData = dynamicHours.map(hour => ({
+    hour: `${String(hour).padStart(2, '0')}h`,
+    pedidos: Math.round(hourlyCounts[hour] / 7)
+  }));
+
+  let maxPedidos = 0;
+  hourlyRushData.forEach(d => {
+    if (d.pedidos > maxPedidos) maxPedidos = d.pedidos;
+  });
+  
+  const peakEntry = hourlyRushData.find(d => d.pedidos === maxPedidos);
+  const peakText = peakEntry && maxPedidos > 0 ? peakEntry.hour : 'N/A';
   const weeklySalesCount: Record<string, number> = {};
   
   stockMovements.forEach(movement => {
@@ -99,21 +153,21 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-xl flex items-start justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap truncate">Faturamento Bruto</p>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {weeklyInflow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-            <span className={`inline-flex items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full ${weeklyNetProfit >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
-              {weeklyNetProfit >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-              Saldo Semanal: R$ {Math.abs(weeklyNetProfit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap truncate">Saldo Líquido</p>
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {totalInflow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <span className={`inline-flex items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full ${monthlyNetProfit >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+              {monthlyNetProfit >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+              Saldo Líquido do mês vigente
             </span>
           </div>
         </div>
 
         <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-xl flex items-start justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap truncate">Saldo Operacional</p>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {weeklyNetProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 mt-2 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              Margem de {weeklyMargin}%
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap truncate">Saldo Pendente</p>
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {monthlySaldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-400 mt-2 bg-orange-500/10 px-2 py-0.5 rounded-full">
+              Fiado do mês atual
             </span>
           </div>
         </div>
@@ -213,7 +267,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
                 />
                 <Bar dataKey="pedidos" radius={[6, 6, 0, 0]}>
                   {hourlyRushData.map((entry, index) => (
-                    <Cell key={`bar-${index}`} fill={entry.pedidos > 60 ? '#f59e0b' : '#ffffff'} />
+                    <Cell key={`bar-${index}`} fill={entry.pedidos >= maxPedidos * 0.8 && maxPedidos > 0 ? '#f59e0b' : '#e2e8f0'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -221,8 +275,10 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-700 pt-3 border-t border-slate-200 mt-2">
-            <span>🔥 Pico Principal: 19h às 21h</span>
-            <span className="text-amber-400 font-semibold">Recomendado: +1 Chapeiro</span>
+            <span>🔥 Pico Principal: {peakText}</span>
+            {maxPedidos > 10 && (
+              <span className="text-amber-400 font-semibold">Alto Volume</span>
+            )}
           </div>
         </div>
       </div>

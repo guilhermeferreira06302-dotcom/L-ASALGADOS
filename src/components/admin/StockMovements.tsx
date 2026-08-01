@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   ArrowDownRight, ArrowUpRight, Search, Calendar, Filter, History, User,
-  X, ChevronDown, FileText, Camera
+  X, ChevronDown, FileText, Camera, CreditCard
 } from 'lucide-react';
 import { StockMovementType } from '../../types';
 
@@ -12,6 +12,7 @@ export const StockMovements: React.FC = () => {
   const [filterType, setFilterType] = useState<'ALL' | StockMovementType>('ALL');
   const [filterOperator, setFilterOperator] = useState('ALL');
   const [filterReason, setFilterReason] = useState('ALL');
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState('ALL');
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -31,6 +32,7 @@ export const StockMovements: React.FC = () => {
 
   const uniqueOperators = Array.from(new Set(stockMovements.map(m => m.operator))).sort();
   const uniqueReasons = Array.from(new Set(stockMovements.map(m => m.reason))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
+  const uniquePaymentMethods = Array.from(new Set(stockMovements.map(m => m.paymentMethod))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
 
   const filteredMovements = stockMovements.filter(mov => {
     if (filterType !== 'ALL' && mov.type !== filterType) return false;
@@ -44,6 +46,10 @@ export const StockMovements: React.FC = () => {
     }
 
     if (filterReason !== 'ALL' && mov.reason !== filterReason) {
+      return false;
+    }
+
+    if (filterPaymentMethod !== 'ALL' && mov.paymentMethod !== filterPaymentMethod) {
       return false;
     }
 
@@ -82,7 +88,7 @@ export const StockMovements: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Filter className="w-4 h-4 text-slate-500" />
@@ -319,6 +325,24 @@ export const StockMovements: React.FC = () => {
               </select>
             </div>
           )}
+
+          {uniquePaymentMethods.length > 0 && (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <CreditCard className="w-4 h-4 text-slate-500" />
+              </div>
+              <select
+                value={filterPaymentMethod}
+                onChange={(e) => setFilterPaymentMethod(e.target.value)}
+                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
+              >
+                <option value="ALL">Todas as Formas</option>
+                {uniquePaymentMethods.map(p => (
+                  <option key={p} value={p} title={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -334,13 +358,14 @@ export const StockMovements: React.FC = () => {
                 <th className="py-3.5 px-5">Quantidade</th>
                 <th className="py-3.5 px-5">Motivo</th>
                 <th className="py-3.5 px-5">Observação</th>
+                <th className="py-3.5 px-5">Forma de Pagamento</th>
                 <th className="py-3.5 px-5">Operador</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 text-sm">
+                  <td colSpan={8} className="py-8 text-center text-slate-500 text-sm">
                     Nenhuma movimentação encontrada para os filtros aplicados.
                   </td>
                 </tr>
@@ -387,6 +412,15 @@ export const StockMovements: React.FC = () => {
                           </button>
                         )}
                       </div>
+                    </td>
+                    <td className="py-3.5 px-5">
+                      {mov.paymentMethod ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-extrabold whitespace-nowrap">
+                          {mov.paymentMethod}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-5">
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs whitespace-nowrap shadow-2xs">

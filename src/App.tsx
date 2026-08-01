@@ -9,6 +9,7 @@ import { ProductManagement } from './components/admin/ProductManagement';
 import { StockMovements } from './components/admin/StockMovements';
 import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { ShiftManagement } from './components/admin/ShiftManagement';
+import { AccessManagement } from './components/admin/AccessManagement';
 import { EmployeePortal } from './components/employee/EmployeePortal';
 import { Menu, Lock } from 'lucide-react';
 
@@ -122,6 +123,7 @@ const MainContent: React.FC = () => {
               {adminTab === 'ESTOQUE' && <StockInventory />}
               {adminTab === 'MOVIMENTACAO' && <StockMovements />}
               {adminTab === 'PRODUTOS' && <ProductManagement />}
+              {adminTab === 'ACESSOS' && <AccessManagement />}
               {adminTab === 'SHIFT' && <ShiftManagement isAdminView />}
             </div>
           ) : isEmployeeLocked ? (
