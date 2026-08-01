@@ -12,7 +12,7 @@ interface MaterialMovementModalProps {
 }
 
 export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ type, onClose, isInline }) => {
-  const { currentUser, ingredients, adjustStock } = useApp();
+  const { currentUser, ingredients, adjustStock, customCategories } = useApp();
   
   const [items, setItems] = useState<{id: string, selectedCat: string, selectedMatId: string, matQty: string}[]>([
     { id: crypto.randomUUID(), selectedCat: '', selectedMatId: '', matQty: '' }
@@ -21,6 +21,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
   const [matTime, setMatTime] = useState<string>(new Date().toTimeString().slice(0, 5));
   const [matNotes, setMatNotes] = useState<string>('');
   const [outflowReason, setOutflowReason] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [photos, setPhotos] = useState<string[]>([]);
 
   useEffect(() => {
@@ -32,9 +33,9 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
     return () => clearInterval(interval);
   }, []);
 
-  const materialCategories = Array.from(new Set(
-    ingredients.map(ing => ing.category || 'INSUMOS GERAIS')
-  )).sort();
+  const materialCategories = Array.from(new Set([
+    ...(customCategories || [])
+  ])).filter(c => c && c !== 'OUTROS' && c !== 'GERAL').sort();
 
   const addItem = () => {
     setItems([...items, { id: crypto.randomUUID(), selectedCat: '', selectedMatId: '', matQty: '' }]);
@@ -121,7 +122,10 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
       const changeNum = type === 'ENTRADA' ? qtyNum : -qtyNum;
       
       const reasonText = type === 'ENTRADA' ? 'Entrada' : outflowReason;
-      const observationText = matNotes || 'Sem observação';
+      let observationText = matNotes || 'Sem observação';
+      if (type === 'SAIDA' && outflowReason === 'Venda' && paymentMethod) {
+        observationText += ` | Pagamento: ${paymentMethod}`;
+      }
       const photoToSave = (type === 'SAIDA' && outflowReason === 'Prejuízo' && photos.length > 0) 
         ? photos[Math.min(index, photos.length - 1)] 
         : undefined;
@@ -347,6 +351,26 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                 <option value="Venda">Venda</option>
                 <option value="Prejuízo">Prejuízo</option>
                 <option value="Outros">Outros</option>
+              </select>
+            </div>
+          )}
+
+          {type === 'SAIDA' && outflowReason === 'Venda' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-slate-500" />
+                <span>Forma de Pagamento</span>
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+              >
+                <option value="" disabled hidden>Selecione o pagamento...</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão">Cartão</option>
+                <option value="Pegou Fiado">Pegou Fiado</option>
               </select>
             </div>
           )}

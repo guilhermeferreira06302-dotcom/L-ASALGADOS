@@ -103,8 +103,7 @@ export const ProductManagement: React.FC = () => {
   };
 
   const allCategories = Array.from(new Set([
-    ...(customCategories || []),
-    ...products.map(p => p.category)
+    ...(customCategories || [])
   ])).filter(c => c && c !== 'OUTROS' && c !== 'GERAL').sort();
 
   const filterCategories = ['ALL', ...allCategories];

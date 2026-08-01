@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   User, UserRole, Ingredient, Product, Order, FinancialTransaction, 
-  InventoryAudit, OrderStatus, isStockActive, StockMovement
+  InventoryAudit, OrderStatus, isStockActive, StockMovement, Shift
 } from '../types';
 import { 
   INITIAL_USERS, INITIAL_INGREDIENTS, INITIAL_PRODUCTS, 
@@ -44,9 +44,14 @@ interface AppContextType {
   // AI Helper
   generateAIAdvice: (promptType: 'ESTOQUE' | 'FINANCEIRO' | 'VENDAS' | 'GERAL', customQuestion?: string) => Promise<string>;
   resetToDefaultData: () => void;
+  // Shift Management
+  shifts: Shift[];
+  currentShift: Shift | null;
+  openShift: (initialCash: number, openedBy: string) => void;
+  closeShift: (actualCash: number, actualCard: number, closedBy: string, notes?: string) => void;
 }
 
-const STORAGE_KEY = 'sabor_gestao_data_v2';
+const STORAGE_KEY = 'sabor_gestao_data_v3';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -59,7 +64,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(INITIAL_TRANSACTIONS);
   const [audits, setAudits] = useState<InventoryAudit[]>(INITIAL_AUDITS);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [customCategories, setCustomCategories] = useState<string[]>(['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO']);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [shifts, setShifts] = useState<Shift[]>([]);
 
   // Load from LocalStorage
   useEffect(() => {
@@ -89,9 +96,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (parsed.transactions) setTransactions(parsed.transactions);
         if (parsed.audits) setAudits(parsed.audits);
         if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
-        if (parsed.customCategories && parsed.customCategories.length > 0) {
-          setCustomCategories(parsed.customCategories);
+        if (parsed.customCategories) {
+          const testCats = ['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO', 'PÃES & MASSAS', 'CARNES & FRIOS', 'LATICÍNIOS & QUEIJOS', 'HORTIFRUTI', 'MOLHOS & CONDIMENTOS', 'CONGELADOS & PORÇÕES', 'MERCEARIA & ÓLEOS', 'BEBIDAS'];
+          const filteredCats = parsed.customCategories.filter((c: string) => !testCats.includes(c));
+          setCustomCategories(filteredCats);
         }
+        if (parsed.currentShift !== undefined) {
+          setCurrentShift(parsed.currentShift);
+        }
+        if (parsed.shifts) setShifts(parsed.shifts);
       } catch (e) {
         console.error('Failed to parse localStorage data', e);
       }
@@ -126,9 +139,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (parsed.transactions) setTransactions(parsed.transactions);
           if (parsed.audits) setAudits(parsed.audits);
           if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
-          if (parsed.customCategories && parsed.customCategories.length > 0) {
-            setCustomCategories(parsed.customCategories);
+          if (parsed.customCategories) {
+            const testCats = ['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO', 'PÃES & MASSAS', 'CARNES & FRIOS', 'LATICÍNIOS & QUEIJOS', 'HORTIFRUTI', 'MOLHOS & CONDIMENTOS', 'CONGELADOS & PORÇÕES', 'MERCEARIA & ÓLEOS', 'BEBIDAS'];
+            const filteredCats = parsed.customCategories.filter((c: string) => !testCats.includes(c));
+            setCustomCategories(filteredCats);
           }
+          if (parsed.currentShift !== undefined) {
+            setCurrentShift(parsed.currentShift);
+          }
+          if (parsed.shifts) setShifts(parsed.shifts);
         } catch (e) {
           console.error('Failed to sync from other tab', e);
         }
@@ -148,9 +167,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       transactions,
       audits,
       stockMovements,
-      customCategories
+      customCategories,
+      currentShift,
+      shifts
     }));
-  }, [ingredients, products, orders, transactions, audits, stockMovements, customCategories]);
+  }, [ingredients, products, orders, transactions, audits, stockMovements, customCategories, currentShift, shifts]);
 
   // Cruzamento estrito: A aba de Estoque (ingredients) deve conter APENAS o que está cadastrado na aba de Produtos
   useEffect(() => {
@@ -525,7 +546,47 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setTransactions(INITIAL_TRANSACTIONS);
     setAudits(INITIAL_AUDITS);
     setStockMovements([]);
-    setCustomCategories(['BURGER', 'PORCAO', 'BEBIDA', 'SOBREMESA', 'COMBO']);
+    setCustomCategories([]);
+    setCurrentShift(null);
+    setShifts([]);
+  };
+
+  const openShift = (initialCash: number, openedBy: string) => {
+    const newShift: Shift = {
+      id: `shift-${Date.now()}`,
+      openedAt: new Date().toISOString(),
+      openedBy,
+      initialCash,
+      status: 'OPEN'
+    };
+    setCurrentShift(newShift);
+  };
+
+  const closeShift = (actualCash: number, actualCard: number, closedBy: string, notes?: string) => {
+    if (!currentShift) return;
+    
+    // Calcula o valor esperado no caixa.
+    // Pega as transações desde a abertura do turno
+    const shiftTransactions = transactions.filter(t => new Date(t.date).getTime() >= new Date(currentShift.openedAt.split('T')[0]).getTime());
+    // Lógica simplificada de dinheiro: Entradas - Saídas
+    // (Na prática, deveria considerar apenas transações em DINHEIRO se o caixa for apenas a gaveta de dinheiro,
+    // mas aqui faremos um fechamento geral para demonstração)
+    const totalIn = shiftTransactions.filter(t => t.type === 'ENTRADA').reduce((acc, t) => acc + t.amount, 0);
+    const totalOut = shiftTransactions.filter(t => t.type === 'SAIDA').reduce((acc, t) => acc + t.amount, 0);
+    const expected = currentShift.initialCash + totalIn - totalOut;
+
+    const closedShift: Shift = {
+      ...currentShift,
+      closedAt: new Date().toISOString(),
+      closedBy,
+      finalCashExpected: expected,
+      finalCashActual: actualCash,
+      finalCardActual: actualCard,
+      status: 'CLOSED',
+      notes
+    };
+    setCurrentShift(null); // O turno atual deixa de existir e vira "fechado"
+    setShifts(prev => [closedShift, ...prev]);
   };
 
   return (
@@ -558,7 +619,11 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         updateCustomCategory,
         deleteCustomCategory,
         generateAIAdvice,
-        resetToDefaultData
+        resetToDefaultData,
+        shifts,
+        currentShift,
+        openShift,
+        closeShift
       }}
     >
       {children}

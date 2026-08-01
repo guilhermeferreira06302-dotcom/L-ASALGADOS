@@ -28,10 +28,7 @@ export interface Ingredient {
 }
 
 export const isStockActive = (ing: Ingredient): boolean => {
-  if (ing.hasReceivedEntry === true) return true;
-  if (ing.currentStock > 0) return true;
-  if (ing.lastUpdated !== 'Sem entrada' && ing.lastUpdated !== 'Pendente de Entrada' && ing.lastUpdated !== '') return true;
-  return false;
+  return true;
 };
 
 export interface RecipeItem {
@@ -124,4 +121,20 @@ export interface StockMovement {
   operator: string;
   date: string; // ISO string for easy sorting/filtering
   photo?: string;
+}
+
+export type ShiftStatus = 'OPEN' | 'CLOSED';
+
+export interface Shift {
+  id: string;
+  openedAt: string; // ISO string
+  closedAt?: string; // ISO string
+  openedBy: string; // User Name
+  closedBy?: string; // User Name
+  initialCash: number;
+  finalCashExpected?: number;
+  finalCashActual?: number;
+  finalCardActual?: number;
+  status: ShiftStatus;
+  notes?: string;
 }

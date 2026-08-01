@@ -8,7 +8,7 @@ import {
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const FinancialAnalysis: React.FC = () => {
-  const { transactions, addTransaction, stockMovements, ingredients } = useApp();
+  const { transactions, addTransaction, stockMovements, ingredients, orders, products } = useApp();
   const [filterType, setFilterType] = useState<string>('TODOS');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,15 +64,36 @@ export const FinancialAnalysis: React.FC = () => {
     .filter(t => t.type === 'ENTRADA')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalOut = filtered
-    .filter(t => t.type === 'SAIDA')
-    .reduce((sum, t) => sum + t.amount, 0);
-
   const totalLoss = filtered
-    .filter(t => t.category === 'PREJUIZO')
+    .filter(t => t.type === 'SAIDA' && t.category === 'PREJUIZO')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const balance = totalIn - totalOut;
+  // Manual OUT transactions, excluding 'PREJUIZO'
+  const manualOut = filtered
+    .filter(t => t.type === 'SAIDA' && t.category !== 'PREJUIZO')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Cost of Goods Sold (COGS) -> Custo dos produtos vendidos baseados nas transações de ENTRADA do tipo VENDAS
+  const productCosts = filtered
+    .filter(t => t.type === 'ENTRADA' && t.category === 'VENDAS' && t.relatedOrderId)
+    .reduce((sum, tx) => {
+      const order = orders.find(o => o.id === tx.relatedOrderId);
+      if (!order) return sum;
+      
+      const orderCost = order.items.reduce((itemSum, item) => {
+        const product = products.find(p => p.id === item.productId);
+        // Fallback to 0 if product is missing or doesn't have a cost
+        return itemSum + ((product?.costPrice || 0) * item.quantity);
+      }, 0);
+
+      return sum + orderCost;
+    }, 0);
+
+  // Total de Saídas is the sum of manual expenses + cost of the products sold
+  const totalOut = manualOut + productCosts;
+
+  // Saldo Operacional = Faturamento - (Total de Saídas + Prejuízos)
+  const balance = totalIn - (totalOut + totalLoss);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +142,7 @@ export const FinancialAnalysis: React.FC = () => {
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalIn.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalIn.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p className="text-[11px] text-slate-700 mt-1">Valor total faturado no período</p>
         </div>
 
@@ -132,7 +153,7 @@ export const FinancialAnalysis: React.FC = () => {
               <ArrowDownRight className="w-4 h-4" />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalOut.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalOut.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p className="text-[11px] text-slate-700 mt-1">Valor total de saídas descontadas</p>
         </div>
 
@@ -143,7 +164,7 @@ export const FinancialAnalysis: React.FC = () => {
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p className="text-[11px] text-slate-700 mt-1">Perdas e descartes do período</p>
         </div>
 
@@ -155,7 +176,7 @@ export const FinancialAnalysis: React.FC = () => {
             </div>
           </div>
           <h3 className={`text-2xl font-extrabold mt-2 ${balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
           <p className="text-[11px] text-slate-700 mt-1">Lucro com as saídas descontadas</p>
         </div>
@@ -437,7 +458,7 @@ export const FinancialAnalysis: React.FC = () => {
                       </span>
                     </td>
                     <td className={`py-3.5 px-5 text-right font-extrabold ${tx.type === 'ENTRADA' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {tx.type === 'ENTRADA' ? '+ ' : '- '}R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {tx.type === 'ENTRADA' ? '+ ' : '- '}R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))
