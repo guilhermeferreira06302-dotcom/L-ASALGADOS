@@ -15,9 +15,12 @@ import { Menu, Lock } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { currentUser, currentShift } = useApp();
-  const [activePortal, setActivePortal] = useState<'ADMIN' | 'FUNCIONARIO'>(
-    currentUser?.role === 'ADMIN' ? 'ADMIN' : 'FUNCIONARIO'
-  );
+  const [activePortalOverride, setActivePortalOverride] = useState<'ADMIN' | 'FUNCIONARIO' | null>(null);
+  const activePortal = activePortalOverride || (currentUser?.role === 'ADMIN' ? 'ADMIN' : 'FUNCIONARIO');
+
+  const setActivePortal = (portal: 'ADMIN' | 'FUNCIONARIO') => {
+    setActivePortalOverride(portal);
+  };
   const [adminTab, setAdminTab] = useState<string>('DASHBOARD');
   const [employeeTab, setEmployeeTab] = useState<'SHIFT' | 'OPERACAO'>('SHIFT');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -32,12 +35,10 @@ const MainContent: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync portal toggle when user logs in or switches
+  // Reset portal override when user logs in or switches
   React.useEffect(() => {
-    if (currentUser) {
-      setActivePortal(currentUser.role === 'ADMIN' ? 'ADMIN' : 'FUNCIONARIO');
-    }
-  }, [currentUser?.role]);
+    setActivePortalOverride(null);
+  }, [currentUser?.id, currentUser?.role]);
 
   if (!currentUser) {
     return <LoginScreen />;
