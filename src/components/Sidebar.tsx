@@ -104,38 +104,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Portal Switcher Card (Only for Admins) */}
-        {currentUser.role === 'ADMIN' && (
-          <div className="p-4 border-b border-slate-200/80 bg-slate-50/40">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 block mb-2">
-              Módulo Operacional
-            </label>
-            <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() => handlePortalSwitch('ADMIN')}
-                className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  activePortal === 'ADMIN'
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>Admin</span>
-              </button>
-              <button
-                onClick={() => handlePortalSwitch('FUNCIONARIO')}
-                className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  activePortal === 'FUNCIONARIO'
-                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 shadow-sm'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                <ChefHat className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>PDV / Loja</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Static Module Name for Employees */}
         {currentUser.role !== 'ADMIN' && (
