@@ -149,7 +149,7 @@ const MainContent: React.FC = () => {
             <div className="space-y-6">
               {employeeTab === 'SHIFT' && <ShiftManagement />}
               {employeeTab === 'OPERACAO' && (
-                !currentShift ? (
+                (!currentShift && currentUser.role === 'FUNCIONARIO') ? (
                   <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300">
                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-md w-full text-center space-y-4">
                       <h2 className="text-xl font-bold text-slate-900">Operação Bloqueada</h2>
