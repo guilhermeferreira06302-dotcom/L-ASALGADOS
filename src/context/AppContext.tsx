@@ -60,7 +60,10 @@ const STORAGE_KEY = 'sabor_gestao_data_v3';
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]); // default Carlos Mendes (Admin)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedUser = sessionStorage.getItem('sabor_gestao_currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -300,19 +303,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = (name: string, password?: string): boolean => {
     const found = users.find(u => u.name.toLowerCase() === name.toLowerCase());
     
-    // Quick login for demo (passwordless) if no password provided by UI (quick access buttons)
-    // BUT the new requirement is to actually validate password if it's provided.
     if (found) {
       if (password !== undefined) {
         if (found.password === password) {
           setCurrentUser(found);
+          sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
           return true;
         }
         return false;
       }
       
-      // Quick login fallback
       setCurrentUser(found);
+      sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
       return true;
     }
     return false;
@@ -322,6 +324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     if (currentUser?.id === updatedUser.id) {
       setCurrentUser(updatedUser);
+      sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updatedUser));
     }
   };
 
@@ -347,11 +350,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setCurrentUser(null);
+    sessionStorage.removeItem('sabor_gestao_currentUser');
   };
 
   const switchRole = (role: UserRole) => {
     if (!currentUser) return;
-    setCurrentUser({ ...currentUser, role });
+    const updated = { ...currentUser, role };
+    setCurrentUser(updated);
+    sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updated));
   };
 
   const addProduct = (prodData: Omit<Product, 'id'>) => {
