@@ -145,7 +145,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudLastUpdated = parsed.lastUpdated || 0;
           
           // Só sobrescreve se a nuvem tiver dados mais novos OU o local estiver vazio
-          if (cloudLastUpdated >= localLastUpdated || !savedLocal) {
+          // PROTEÇÃO EXTRA: Se o local não tinha timestamp (versão antiga) mas TEM produtos, e a nuvem NÃO TEM produtos, NÃO sobrescreve!
+          let hasLocalProducts = false;
+          try {
+            if (savedLocal) {
+              const p = JSON.parse(savedLocal);
+              hasLocalProducts = p.products && p.products.length > 0;
+            }
+          } catch(e) {}
+          
+          const cloudHasNoProducts = !parsed.products || parsed.products.length === 0;
+          const isUpgradingFromOldVersion = localLastUpdated === 0 && hasLocalProducts && cloudHasNoProducts;
+
+          if ((cloudLastUpdated >= localLastUpdated && !isUpgradingFromOldVersion) || !savedLocal) {
             if (parsed.users) setUsers(parsed.users);
             if (parsed.ingredients) setIngredients(parsed.ingredients);
             if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name ? p.name.toUpperCase() : '' })));
