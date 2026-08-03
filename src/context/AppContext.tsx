@@ -131,19 +131,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
         if (data && data.value) {
           const parsed = data.value;
-          if (parsed.users) setUsers(parsed.users);
-          if (parsed.ingredients) setIngredients(parsed.ingredients);
-          if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name.toUpperCase() })));
-          if (parsed.orders) setOrders(parsed.orders);
-          if (parsed.transactions) setTransactions(parsed.transactions);
-          if (parsed.audits) setAudits(parsed.audits);
-          if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
-          if (parsed.customCategories) setCustomCategories(parsed.customCategories);
-          if (parsed.currentShift !== undefined) setCurrentShift(parsed.currentShift);
-          if (parsed.shifts) setShifts(parsed.shifts);
           
-          // Atualiza também o local storage com os dados da nuvem
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          // Verifica se o dado da nuvem é mais recente que o local
+          const savedLocal = localStorage.getItem(STORAGE_KEY);
+          let localLastUpdated = 0;
+          if (savedLocal) {
+            try {
+              const parsedLocal = JSON.parse(savedLocal);
+              if (parsedLocal.lastUpdated) localLastUpdated = parsedLocal.lastUpdated;
+            } catch (e) {}
+          }
+          
+          const cloudLastUpdated = parsed.lastUpdated || 0;
+          
+          // Só sobrescreve se a nuvem tiver dados mais novos OU o local estiver vazio
+          if (cloudLastUpdated >= localLastUpdated || !savedLocal) {
+            if (parsed.users) setUsers(parsed.users);
+            if (parsed.ingredients) setIngredients(parsed.ingredients);
+            if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name.toUpperCase() })));
+            if (parsed.orders) setOrders(parsed.orders);
+            if (parsed.transactions) setTransactions(parsed.transactions);
+            if (parsed.audits) setAudits(parsed.audits);
+            if (parsed.stockMovements) setStockMovements(parsed.stockMovements);
+            if (parsed.customCategories) setCustomCategories(parsed.customCategories);
+            if (parsed.currentShift !== undefined) setCurrentShift(parsed.currentShift);
+            if (parsed.shifts) setShifts(parsed.shifts);
+            
+            // Atualiza também o local storage com os dados da nuvem
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          } else {
+            console.log('Dados locais são mais recentes. Ignorando nuvem e forçando upload.', { localLastUpdated, cloudLastUpdated });
+            // Força o upload do dado local para a nuvem
+            supabase.from('app_settings').upsert(
+              { key: STORAGE_KEY, value: JSON.parse(savedLocal) },
+              { onConflict: 'key' }
+            ).then();
+          }
         }
       } catch (err) {
         console.error('Erro silencioso ao buscar dados da nuvem', err);
@@ -212,7 +235,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       stockMovements,
       customCategories,
       currentShift,
-      shifts
+      shifts,
+      lastUpdated: Date.now()
     };
 
     // 1. Salvar no armazenamento local (offline-first, rápido)
