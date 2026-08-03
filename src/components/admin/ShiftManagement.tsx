@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock } from 'lucide-react';
+import { Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminView }) => {
-  const { currentShift, openShift, closeShift, addTransaction, currentUser, shifts } = useApp();
+  const { currentShift, openShift, closeShift, cancelShift, addTransaction, currentUser, shifts } = useApp();
   
   // Abertura states
   const [initialCashStr, setInitialCashStr] = useState('');
@@ -68,7 +68,8 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminVi
                   <th className="py-3 px-4">Fundo Inicial</th>
                   <th className="py-3 px-4 text-right">Vendas (Dinheiro)</th>
                   <th className="py-3 px-4 text-right">Vendas (Cartão)</th>
-                  <th className="py-3 px-4 text-right rounded-tr-xl">Total Vendas</th>
+                  <th className="py-3 px-4 text-right">Total Vendas</th>
+                  <th className="py-3 px-4 text-right rounded-tr-xl">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -113,6 +114,15 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminVi
                     <td className="py-3 px-4 text-xs font-medium text-right text-slate-400">
                       ---
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      <button 
+                        onClick={() => { if(window.confirm('Excluir este turno em andamento?')) cancelShift() }}
+                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                        title="Cancelar turno atual"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 )}
 
@@ -147,6 +157,15 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminVi
                     </td>
                     <td className="py-3 px-4 text-xs font-extrabold text-right text-slate-900 bg-slate-50/50">
                       R$ {((shift.finalCashActual || 0) + (shift.finalCardActual || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button 
+                        onClick={() => { if(window.confirm('Excluir histórico deste turno?')) cancelShift(shift.id) }}
+                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                        title="Excluir histórico"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

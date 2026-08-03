@@ -53,6 +53,7 @@ interface AppContextType {
   currentShift: Shift | null;
   openShift: (initialCash: number, openedBy: string) => void;
   closeShift: (actualCash: number, actualCard: number, closedBy: string, notes?: string) => void;
+  cancelShift: (shiftId?: string) => void;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -677,6 +678,14 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setShifts(prev => [closedShift, ...prev]);
   };
 
+  const cancelShift = (shiftId?: string) => {
+    if (!shiftId || (currentShift && currentShift.id === shiftId)) {
+      setCurrentShift(null);
+    } else {
+      setShifts(prev => prev.filter(s => s.id !== shiftId));
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -714,7 +723,8 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         shifts,
         currentShift,
         openShift,
-        closeShift
+        closeShift,
+        cancelShift
       }}
     >
       {children}
