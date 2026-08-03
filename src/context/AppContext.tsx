@@ -101,7 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             category: (ing.category && catMap[ing.category]) ? catMap[ing.category] : (ing.category || 'BURGER')
           })));
         }
-        if (parsed.products) setProducts(parsed.products);
+        if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name.toUpperCase() })));
         if (parsed.orders) setOrders(parsed.orders);
         if (parsed.transactions) setTransactions(parsed.transactions);
         if (parsed.audits) setAudits(parsed.audits);
@@ -133,7 +133,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const parsed = data.value;
           if (parsed.users) setUsers(parsed.users);
           if (parsed.ingredients) setIngredients(parsed.ingredients);
-          if (parsed.products) setProducts(parsed.products);
+          if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name.toUpperCase() })));
           if (parsed.orders) setOrders(parsed.orders);
           if (parsed.transactions) setTransactions(parsed.transactions);
           if (parsed.audits) setAudits(parsed.audits);
@@ -177,7 +177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               category: (ing.category && catMap[ing.category]) ? catMap[ing.category] : (ing.category || 'BURGER')
             })));
           }
-          if (parsed.products) setProducts(parsed.products);
+          if (parsed.products) setProducts(parsed.products.map((p: Product) => ({ ...p, name: p.name.toUpperCase() })));
           if (parsed.orders) setOrders(parsed.orders);
           if (parsed.transactions) setTransactions(parsed.transactions);
           if (parsed.audits) setAudits(parsed.audits);

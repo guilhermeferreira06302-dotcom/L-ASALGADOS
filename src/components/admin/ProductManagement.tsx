@@ -299,9 +299,7 @@ export const ProductManagement: React.FC = () => {
                     placeholder="Ex: Double Cheddar Monster"
                     value={name}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      const formatted = val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '';
-                      setName(formatted);
+                      setName(e.target.value.toUpperCase());
                     }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-bold text-sm"
                     required
