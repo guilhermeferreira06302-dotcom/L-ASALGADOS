@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   Shield, ChefHat, LayoutDashboard, DollarSign, Package, Utensils,
   Bell, AlertTriangle, CheckCircle2, RotateCcw, LogOut, X,
-  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet, TrendingUp, Lock
+  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet, TrendingUp, Lock, Cloud, CloudOff, RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { quantityMask, parseQuantity } from '../utils/masks';
@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   setIsMobileOpen,
 }) => {
-  const { currentUser, logout, switchRole, ingredients, resetToDefaultData, adjustStock } = useApp();
+  const { currentUser, logout, switchRole, ingredients, resetToDefaultData, adjustStock, syncStatus, lastSyncTime } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -347,6 +347,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
           )}
+
+          {/* Cloud Sync Status Card */}
+          <div className="relative mb-2">
+            <div className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-default ${
+              syncStatus === 'SYNCED' ? 'bg-emerald-50/50 border-emerald-200/50' : 
+              syncStatus === 'SYNCING' ? 'bg-blue-50/50 border-blue-200/50' : 
+              'bg-red-50/50 border-red-200/50'
+            }`}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`p-1.5 rounded-lg ${
+                  syncStatus === 'SYNCED' ? 'bg-emerald-100 text-emerald-600' : 
+                  syncStatus === 'SYNCING' ? 'bg-blue-100 text-blue-600' : 
+                  'bg-red-100 text-red-600'
+                }`}>
+                  {syncStatus === 'SYNCED' && <Cloud className="w-4 h-4" />}
+                  {syncStatus === 'SYNCING' && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  {syncStatus === 'ERROR' && <CloudOff className="w-4 h-4" />}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[11px] font-bold truncate ${
+                    syncStatus === 'SYNCED' ? 'text-emerald-700' : 
+                    syncStatus === 'SYNCING' ? 'text-blue-700' : 
+                    'text-red-700'
+                  }`}>
+                    {syncStatus === 'SYNCED' ? 'Nuvem Conectada' : 
+                     syncStatus === 'SYNCING' ? 'Sincronizando...' : 
+                     'Erro de Conexão'}
+                  </p>
+                  <p className="text-[9px] text-slate-500 truncate">
+                    {syncStatus === 'SYNCING' ? 'Aguarde...' : 
+                     lastSyncTime ? `Última vez: ${lastSyncTime}` : 'Sem sincronização'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* User Profile Card */}
           <div className="relative">

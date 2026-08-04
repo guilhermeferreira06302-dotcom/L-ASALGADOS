@@ -54,6 +54,8 @@ interface AppContextType {
   openShift: (initialCash: number, openedBy: string) => void;
   closeShift: (actualCash: number, actualCard: number, closedBy: string, notes?: string) => void;
   cancelShift: (shiftId?: string) => void;
+  syncStatus: 'SYNCED' | 'SYNCING' | 'ERROR';
+  lastSyncTime: string | null;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -75,6 +77,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [syncStatus, setSyncStatus] = useState<'SYNCED' | 'SYNCING' | 'ERROR'>('SYNCED');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   // Load from LocalStorage and Cloud
   useEffect(() => {
@@ -174,10 +178,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else {
             console.log('Dados locais são mais recentes. Ignorando nuvem e forçando upload.', { localLastUpdated, cloudLastUpdated });
             // Força o upload do dado local para a nuvem
+            setSyncStatus('SYNCING');
             supabase.from('app_settings').upsert(
               { key: STORAGE_KEY, value: JSON.parse(savedLocal) },
               { onConflict: 'key' }
-            ).then();
+            ).then(({ error }) => {
+              if (error) {
+                setSyncStatus('ERROR');
+              } else {
+                setSyncStatus('SYNCED');
+                setLastSyncTime(new Date().toLocaleTimeString());
+              }
+            });
           }
         }
       } catch (err) {
@@ -256,12 +268,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Sincronizar na nuvem Supabase em background
     // Usa um timeout para não enviar excesso de requisições enquanto o usuário digita/clica rápido (Debounce)
+    setSyncStatus('SYNCING');
     const timeoutId = setTimeout(() => {
       supabase.from('app_settings').upsert(
         { key: STORAGE_KEY, value: stateToSave },
         { onConflict: 'key' }
       ).then(({ error }) => {
-        if (error) console.error('Erro de sincronização Supabase:', error);
+        if (error) {
+          console.error('Erro de sincronização Supabase:', error);
+          setSyncStatus('ERROR');
+        } else {
+          setSyncStatus('SYNCED');
+          setLastSyncTime(new Date().toLocaleTimeString());
+        }
       });
     }, 1500);
 
@@ -760,7 +779,9 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         currentShift,
         openShift,
         closeShift,
-        cancelShift
+        cancelShift,
+        syncStatus,
+        lastSyncTime
       }}
     >
       {children}
