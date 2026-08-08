@@ -85,12 +85,12 @@ export const ProductManagement: React.FC = () => {
       const fileExt = imageFile.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const { data, error } = await supabase.storage
-        .from('products')
+        .from('fotos-produtos')
         .upload(fileName, imageFile);
       
       if (!error && data) {
         const { data: publicUrlData } = supabase.storage
-          .from('products')
+          .from('fotos-produtos')
           .getPublicUrl(fileName);
         finalImageUrl = publicUrlData.publicUrl;
       }
