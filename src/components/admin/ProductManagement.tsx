@@ -380,6 +380,17 @@ export const ProductManagement: React.FC = () => {
               </div>
 
               <div>
+                <label className="block text-slate-700 font-semibold mb-1">Link da Foto (Opcional)</label>
+                <input
+                  type="url"
+                  placeholder="Cole aqui o link da imagem (URL)"
+                  value={image === 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' ? '' : image}
+                  onChange={(e) => setImage(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-sm font-semibold"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-700 font-semibold mb-1">Descrição Comercial</label>
                 <textarea
                   rows={2}
