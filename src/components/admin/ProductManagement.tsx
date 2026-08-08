@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, Sparkles, ChefHat, Layers
 } from 'lucide-react';
 import { currencyMask, parseCurrency } from '../../utils/masks';
+import { supabase } from '../../lib/supabase';
 
 export const ProductManagement: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct, ingredients, customCategories, addCustomCategory, updateCustomCategory, deleteCustomCategory } = useApp();
@@ -35,6 +36,8 @@ export const ProductManagement: React.FC = () => {
   const [maxStock, setMaxStock] = useState('');
   const [manualCosts, setManualCosts] = useState<{ id: string, name: string, value: string }[]>([]);
   const [available, setAvailable] = useState(true);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const openAddModal = () => {
     const availableCats = Array.from(new Set([...(customCategories || [])])).filter(c => c && c !== 'OUTROS' && c !== 'GERAL').sort();
@@ -50,6 +53,7 @@ export const ProductManagement: React.FC = () => {
     setMaxStock('');
     setManualCosts([]);
     setAvailable(true);
+    setImageFile(null);
     setShowModal(true);
   };
 
@@ -66,13 +70,32 @@ export const ProductManagement: React.FC = () => {
     setMaxStock(prod.maxStock !== undefined ? prod.maxStock.toString() : '');
     setManualCosts(prod.costPrice > 0 ? [{ id: Date.now().toString(), name: 'Custo Principal', value: currencyMask(prod.costPrice.toFixed(2)) }] : []);
     setAvailable(prod.available);
+    setImageFile(null);
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price) return;
     
+    setIsSubmitting(true);
+    let finalImageUrl = image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80';
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(fileName, imageFile);
+      
+      if (!error && data) {
+        const { data: publicUrlData } = supabase.storage
+          .from('products')
+          .getPublicUrl(fileName);
+        finalImageUrl = publicUrlData.publicUrl;
+      }
+    }
+
     const totalCost = manualCosts.reduce((acc, curr) => acc + parseCurrency(curr.value), 0);
     const finalCategory = category;
 
@@ -85,7 +108,7 @@ export const ProductManagement: React.FC = () => {
       category: finalCategory,
       price: parseCurrency(price),
       costPrice: totalCost,
-      image: image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80',
+      image: finalImageUrl,
       available,
       description: description.trim() || '',
       prepTimeMin: parseInt(prepTimeMin) || 10,
@@ -100,6 +123,7 @@ export const ProductManagement: React.FC = () => {
     } else {
       addProduct(prodData);
     }
+    setIsSubmitting(false);
     setShowModal(false);
   };
 
@@ -380,14 +404,25 @@ export const ProductManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Link da Foto (Opcional)</label>
-                <input
-                  type="url"
-                  placeholder="Cole aqui o link da imagem (URL)"
-                  value={image === 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' ? '' : image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-sm font-semibold"
-                />
+                <label className="block text-slate-700 font-semibold mb-1">Foto do Produto (Opcional)</label>
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setImageFile(e.target.files[0]);
+                      }
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-sm font-semibold file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                  />
+                  {imageFile && (
+                    <span className="text-xs text-emerald-600 font-bold">Imagem selecionada: {imageFile.name}</span>
+                  )}
+                  {!imageFile && image && image !== 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' && (
+                    <img src={image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-slate-200 mt-2" />
+                  )}
+                </div>
               </div>
 
               <div>
@@ -482,23 +517,23 @@ export const ProductManagement: React.FC = () => {
                     );
                   })()}
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                   <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-semibold cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-xl shadow-md transition cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  Salvar Produto
+                  {isSubmitting ? 'Salvando e enviando foto...' : 'Salvar Produto'}
                 </button>
-              </div>
+              </div>           </div>
             </form>
           </div>
         </div>
