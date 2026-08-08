@@ -248,11 +248,7 @@ export const AccessManagement: React.FC = () => {
             )}
 
             <div className="flex items-center gap-4 pr-10">
-              <img 
-                src={user.avatar} 
-                alt={user.name} 
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-slate-100 shadow-sm group-hover:scale-105 transition duration-300" 
-              />
+
               <div className="flex-1">
                 <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   {user.name}
