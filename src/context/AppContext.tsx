@@ -224,6 +224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = (updatedUser: User) => {
+    supabase.from('users').update(updatedUser).eq('id', updatedUser.id).then();
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     if (currentUser?.id === updatedUser.id) {
       setCurrentUser(updatedUser);
@@ -236,6 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...userData,
       id: `usr-${Date.now()}`
     };
+    supabase.from('users').insert(newUser).then();
     setUsers(prev => [...prev, newUser]);
   };
 
@@ -244,6 +246,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert("Você não pode excluir o seu próprio acesso atual.");
       return;
     }
+    supabase.from('users').delete().eq('id', id).then();
     setUsers(prev => prev.filter(u => u.id !== id));
   };
 
@@ -268,14 +271,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prodData,
       id: `prod-${Date.now()}`,
     };
+    supabase.from('products').insert(newProd).then();
     setProducts(prev => [newProd, ...prev]);
   };
 
   const updateProduct = (updated: Product) => {
+    supabase.from('products').update(updated).eq('id', updated.id).then();
     setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
   const deleteProduct = (id: string) => {
+    supabase.from('products').delete().eq('id', id).then();
     setProducts(prev => prev.filter(p => p.id !== id));
   };
 
@@ -286,11 +292,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ing-${Date.now()}`,
       lastUpdated: 'Agora mesmo'
     };
+    supabase.from('ingredients').insert(newIng).then();
     setIngredients(prev => [newIng, ...prev]);
   };
 
   const updateIngredient = (updated: Ingredient) => {
-    setIngredients(prev => prev.map(i => i.id === updated.id ? { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : (i.hasReceivedEntry ?? (updated.currentStock > 0)) } : i));
+    const toUpdate = { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
+    supabase.from('ingredients').update(toUpdate).eq('id', toUpdate.id).then();
+    setIngredients(prev => prev.map(i => i.id === updated.id ? toUpdate as Ingredient : i));
   };
 
   const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => {
@@ -310,19 +319,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date: new Date().toISOString(),
         photo
       };
+      supabase.from('stock_movements').insert(movement).then();
       setStockMovements(m => [movement, ...m]);
     }
 
     setIngredients(prev => prev.map(ing => {
       if (ing.id === ingredientId) {
         const newStock = Math.max(0, ing.currentStock + quantityChange);
-        return {
+        const updatedIng = {
           ...ing,
           currentStock: newStock,
           lastUpdated: 'Agora mesmo',
           hasReceivedEntry: quantityChange > 0 ? true : (ing.hasReceivedEntry ?? (ing.currentStock > 0)),
           ...(operatorName ? { operator: operatorName } : {})
         };
+        supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id).then();
+        return updatedIng;
       }
       return ing;
     }));
@@ -390,6 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       discrepanciesCount: discrepancies,
       notes: notes || 'Contagem geral finalizada.'
     };
+    supabase.from('inventory_audits').insert(newAudit).then();
     setAudits(prev => [newAudit, ...prev]);
   };
 
@@ -402,6 +415,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'EM_PREPARO',
       createdAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
+    supabase.from('orders').insert(newOrder).then();
     setOrders(prev => [newOrder, ...prev]);
 
     // Add financial entry immediately or upon delivery
@@ -429,6 +443,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
+    supabase.from('orders').update({ status: newStatus }).eq('id', orderId).then();
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
   };
 
@@ -437,6 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...tx,
       id: `tx-${Date.now()}`
     };
+    supabase.from('transactions').insert(newTx).then();
     setTransactions(prev => [newTx, ...prev]);
   };
 
@@ -495,6 +511,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     if (!clean || clean === 'OUTROS') return;
     setCustomCategories(prev => {
       if (prev.includes(clean)) return prev;
+      supabase.from('custom_categories').insert({ name: clean }).then();
       return [...prev, clean];
     });
   };
@@ -503,28 +520,34 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     const cleanNew = newName.trim().toUpperCase();
     if (!cleanNew || cleanNew === 'OUTROS') return;
     
+    supabase.from('custom_categories').update({ name: cleanNew }).eq('name', oldName).then();
     setCustomCategories(prev => prev.map(c => c === oldName ? cleanNew : c));
     
     // Update products that use this category
+    supabase.from('products').update({ category: cleanNew }).eq('category', oldName).then();
     setProducts(prev => prev.map(p => 
       p.category === oldName ? { ...p, category: cleanNew } : p
     ));
 
     // Update ingredients that use this category
+    supabase.from('ingredients').update({ category: cleanNew }).eq('category', oldName).then();
     setIngredients(prev => prev.map(i => 
       i.category === oldName ? { ...i, category: cleanNew } : i
     ));
   };
 
   const deleteCustomCategory = (name: string) => {
+    supabase.from('custom_categories').delete().eq('name', name).then();
     setCustomCategories(prev => prev.filter(c => c !== name));
     
     // Optionally move products back to GERAL
+    supabase.from('products').update({ category: 'GERAL' }).eq('category', name).then();
     setProducts(prev => prev.map(p => 
       p.category === name ? { ...p, category: 'GERAL' } : p
     ));
 
     // Update ingredients back to GERAL
+    supabase.from('ingredients').update({ category: 'GERAL' }).eq('category', name).then();
     setIngredients(prev => prev.map(i => 
       i.category === name ? { ...i, category: 'GERAL' } : i
     ));
@@ -578,14 +601,17 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       status: 'CLOSED',
       notes
     };
+    supabase.from('shifts').update(closedShift).eq('id', currentShift.id).then();
     setCurrentShift(null); // O turno atual deixa de existir e vira "fechado"
     setShifts(prev => [closedShift, ...prev]);
   };
 
   const cancelShift = (shiftId?: string) => {
     if (!shiftId || (currentShift && currentShift.id === shiftId)) {
+      if (currentShift) supabase.from('shifts').delete().eq('id', currentShift.id).then();
       setCurrentShift(null);
     } else {
+      if (shiftId) supabase.from('shifts').delete().eq('id', shiftId).then();
       setShifts(prev => prev.filter(s => s.id !== shiftId));
     }
   };
