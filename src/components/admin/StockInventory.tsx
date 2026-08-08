@@ -490,7 +490,14 @@ export const StockInventory: React.FC = () => {
                   return (
                     <tr key={ing.id} className="hover:bg-slate-100/40 transition">
                       <td className="py-3.5 px-5">
-                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-3">
+                          {matchedProd && matchedProd.image && matchedProd.image !== 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' ? (
+                            <img src={matchedProd.image} alt={ing.name} className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-200" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                               <Package className="w-5 h-5" />
+                            </div>
+                          )}
                           <span className="text-[15px]">{ing.name}</span>
                         </div>
                       </td>
