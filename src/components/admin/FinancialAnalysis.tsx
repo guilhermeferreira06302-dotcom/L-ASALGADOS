@@ -34,7 +34,7 @@ export const FinancialAnalysis: React.FC = () => {
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const parts = dateStr.split('-');
+    const parts = dateStr.split('T')[0].split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
@@ -452,7 +452,7 @@ export const FinancialAnalysis: React.FC = () => {
                   <tr key={tx.id} className="hover:bg-slate-100/40 transition">
                     <td className="py-3.5 px-5 text-xs text-slate-700 flex items-center gap-1.5 whitespace-nowrap">
                       <Calendar className="w-3.5 h-3.5" />
-                      {tx.date.split('-').reverse().join('/')}
+                      {tx.date.split('T')[0].split('-').reverse().join('/')}
                     </td>
                     <td className="py-3.5 px-5 font-medium text-slate-900">
                       {tx.description}
