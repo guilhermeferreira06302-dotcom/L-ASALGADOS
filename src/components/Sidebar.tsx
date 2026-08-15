@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
           
           {/* Admin Navigation */}
-          {activePortal === 'ADMIN' ? (
+          {activePortal === 'ADMIN' && (
             <div className="space-y-1.5">
               <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">
                 Menu Principal
@@ -247,6 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Lock className={`w-4 h-4 ${adminTab === 'ACESSOS' ? 'text-red-500' : 'text-slate-700'}`} />
                   <span>Acessos</span>
                 </div>
+              </button>
             </div>
           )}
 
