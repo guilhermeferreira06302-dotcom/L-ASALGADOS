@@ -308,6 +308,9 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                           } else if (val === 'Pegou Fiado') {
                             setOutflowReason('Outros');
                             setPhotos([]);
+                          } else if (val === 'Dinheiro' || val === 'Cartão') {
+                            setOutflowReason('Venda');
+                            setPhotos([]);
                           }
                         }}
                         required
@@ -391,7 +394,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                   }
                 }}
                 required
-                disabled={items.some(i => i.paymentMethod === 'Prejuízo' || i.paymentMethod === 'Pegou Fiado')}
+                disabled={items.some(i => i.paymentMethod !== '')}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="" disabled hidden>Selecione o motivo...</option>
