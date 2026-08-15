@@ -8,7 +8,7 @@ import {
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const FinancialAnalysis: React.FC = () => {
-  const { transactions, addTransaction, stockMovements, ingredients, orders, products } = useApp();
+  const { transactions, addTransaction, stockMovements, ingredients, orders, products, settlePendingDebt } = useApp();
   const [filterType, setFilterType] = useState<string>('TODOS');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +31,7 @@ export const FinancialAnalysis: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
   const [showModal, setShowModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -111,9 +112,9 @@ export const FinancialAnalysis: React.FC = () => {
        return sum + ((prod?.costPrice || 0) * m.quantity);
     }, 0);
 
-  const saldoPendente = filteredMovements
-    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
-    .reduce((sum, m) => {
+  const pendingDebtsList = filteredMovements.filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado');
+
+  const saldoPendente = pendingDebtsList.reduce((sum, m) => {
        const prodId = m.ingredientId.replace('ing-prod-', '');
        const prod = products.find(p => p.id === prodId);
        return sum + ((prod?.price || 0) * m.quantity);
@@ -213,15 +214,25 @@ export const FinancialAnalysis: React.FC = () => {
           <p className="text-[11px] text-slate-700 mt-1">Valor total faturado no período</p>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white border border-slate-200">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-bold uppercase tracking-wider text-orange-400">Saldo Pendente</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
-              <ArrowDownRight className="w-4 h-4" />
+        <div className="p-5 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold uppercase tracking-wider text-orange-400">Saldo Pendente</span>
+              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <ArrowDownRight className="w-4 h-4" />
+              </div>
             </div>
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <p className="text-[11px] text-slate-700 mt-1 mb-3">Valor total de vendas no fiado</p>
           </div>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-          <p className="text-[11px] text-slate-700 mt-1">Valor total de vendas no fiado</p>
+          {saldoPendente > 0 && (
+            <button
+              onClick={() => setShowPendingModal(true)}
+              className="w-full py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Ver e Quitar Dívidas
+            </button>
+          )}
         </div>
 
         <div className="p-5 rounded-3xl bg-white border border-slate-200">
@@ -630,6 +641,65 @@ export const FinancialAnalysis: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Quitar Dívidas Pendentes */}
+      {showPendingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <span>Dívidas Pendentes (Fiado)</span>
+              </h3>
+              <button onClick={() => setShowPendingModal(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto pr-2 space-y-3 flex-1 mb-4">
+              {pendingDebtsList.length === 0 ? (
+                <p className="text-center text-sm text-slate-500 py-6">Nenhuma dívida pendente.</p>
+              ) : (
+                pendingDebtsList.map(m => {
+                  const prodId = m.ingredientId.replace('ing-prod-', '');
+                  const prod = products.find(p => p.id === prodId);
+                  const amount = ((prod?.price || 0) * m.quantity);
+                  return (
+                    <div key={m.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
+                        <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-extrabold text-orange-500">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <button
+                          onClick={async () => {
+                            await settlePendingDebt(m.id);
+                            if (pendingDebtsList.length === 1) setShowPendingModal(false);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowPendingModal(false)}
+                className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer hover:bg-slate-200 transition"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

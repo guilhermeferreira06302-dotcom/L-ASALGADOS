@@ -16,7 +16,7 @@ import { Lock, Menu } from 'lucide-react';
 const MainContent: React.FC = () => {
   const { currentUser, currentShift } = useApp();
   const [activePortalOverride, setActivePortalOverride] = useState<'ADMIN' | 'FUNCIONARIO' | null>(() => {
-    return (sessionStorage.getItem('sabor_gestao_activePortal') as any) || null;
+    return (localStorage.getItem('sabor_gestao_activePortal') as any) || null;
   });
   const activePortal = activePortalOverride || (currentUser?.role === 'ADMIN' ? 'ADMIN' : 'FUNCIONARIO');
 
@@ -24,10 +24,10 @@ const MainContent: React.FC = () => {
     setActivePortalOverride(portal);
   };
   const [adminTab, setAdminTab] = useState<string>(() => {
-    return sessionStorage.getItem('sabor_gestao_adminTab') || 'DASHBOARD';
+    return localStorage.getItem('sabor_gestao_adminTab') || 'DASHBOARD';
   });
   const [employeeTab, setEmployeeTab] = useState<'SHIFT' | 'OPERACAO'>(() => {
-    return (sessionStorage.getItem('sabor_gestao_employeeTab') as any) || 'OPERACAO';
+    return (localStorage.getItem('sabor_gestao_employeeTab') as any) || 'OPERACAO';
   });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
@@ -44,19 +44,19 @@ const MainContent: React.FC = () => {
   // Reset portal override when user logs in or switches
   React.useEffect(() => {
     setActivePortalOverride(null);
-    sessionStorage.removeItem('sabor_gestao_activePortal');
+    localStorage.removeItem('sabor_gestao_activePortal');
   }, [currentUser?.id, currentUser?.role]);
 
   React.useEffect(() => {
-    if (activePortalOverride) sessionStorage.setItem('sabor_gestao_activePortal', activePortalOverride);
+    if (activePortalOverride) localStorage.setItem('sabor_gestao_activePortal', activePortalOverride);
   }, [activePortalOverride]);
 
   React.useEffect(() => {
-    sessionStorage.setItem('sabor_gestao_adminTab', adminTab);
+    localStorage.setItem('sabor_gestao_adminTab', adminTab);
   }, [adminTab]);
 
   React.useEffect(() => {
-    sessionStorage.setItem('sabor_gestao_employeeTab', employeeTab);
+    localStorage.setItem('sabor_gestao_employeeTab', employeeTab);
   }, [employeeTab]);
 
   if (!currentUser) {

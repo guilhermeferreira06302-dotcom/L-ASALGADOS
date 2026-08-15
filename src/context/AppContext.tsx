@@ -40,6 +40,7 @@ interface AppContextType {
   updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   // Financial actions
   addTransaction: (tx: Omit<FinancialTransaction, 'id'>) => void;
+  settlePendingDebt: (movementId: string) => Promise<void>;
   // Custom categories
   customCategories: string[];
   addCustomCategory: (categoryName: string) => void;
@@ -64,7 +65,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const savedUser = sessionStorage.getItem('sabor_gestao_currentUser');
+    const savedUser = localStorage.getItem('sabor_gestao_currentUser');
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [users, setUsers] = useState<User[]>([]);
@@ -290,14 +291,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (password !== undefined) {
         if (found.password === password) {
           setCurrentUser(found);
-          sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
+          localStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
           return true;
         }
         return false;
       }
       
       setCurrentUser(found);
-      sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
+      localStorage.setItem('sabor_gestao_currentUser', JSON.stringify(found));
       return true;
     }
     return false;
@@ -313,7 +314,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     if (currentUser?.id === updatedUser.id) {
       setCurrentUser(updatedUser);
-      sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updatedUser));
+      localStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updatedUser));
     }
   };
 
@@ -351,14 +352,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setCurrentUser(null);
-    sessionStorage.removeItem('sabor_gestao_currentUser');
+    localStorage.removeItem('sabor_gestao_currentUser');
   };
 
   const switchRole = (role: UserRole) => {
     if (!currentUser) return;
     const updated = { ...currentUser, role };
     setCurrentUser(updated);
-    sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updated));
+    localStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updated));
   };
 
   const addProduct = async (prodData: Omit<Product, 'id'>) => {
@@ -615,6 +616,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions(prev => [newTx, ...prev]);
   };
 
+  const settlePendingDebt = async (movementId: string) => {
+    const targetMov = stockMovements.find(m => m.id === movementId);
+    if (!targetMov) return;
+
+    // Atualiza para 'Dinheiro' ou outra forma padrão de quitação
+    const { error } = await supabase
+      .from('stock_movements')
+      .update({ paymentMethod: 'Dinheiro' })
+      .eq('id', movementId);
+
+    if (error) {
+      console.error('Erro ao quitar dívida:', error);
+      alert('Erro ao atualizar dívida no banco: ' + error.message);
+      throw error;
+    }
+
+    // A atualização local será feita automaticamente pelo Realtime Subscription,
+    // mas também podemos fazer otimisticamente:
+    setStockMovements(prev => prev.map(m => m.id === movementId ? { ...m, paymentMethod: 'Dinheiro' } : m));
+  };
+
   const generateAIAdvice = async (promptType: 'ESTOQUE' | 'FINANCEIRO' | 'VENDAS' | 'GERAL', customQuestion?: string): Promise<string> => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     
@@ -842,6 +864,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         createOrder,
         updateOrderStatus,
         addTransaction,
+        settlePendingDebt,
         addCustomCategory,
         updateCustomCategory,
         deleteCustomCategory,

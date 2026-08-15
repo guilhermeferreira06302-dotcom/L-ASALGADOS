@@ -25,7 +25,7 @@ export const StockInventory: React.FC = () => {
   const [showAuditWizard, setShowAuditWizard] = useState(false);
 
   // Audit wizard state
-  const [auditCounts, setAuditCounts] = useState<{ [id: string]: number }>({});
+  const [auditCounts, setAuditCounts] = useState<{ [id: string]: string | number }>({});
   const [auditNotes, setAuditNotes] = useState('');
 
   const getIngredientDateStr = (lastUpdated: string): string => {
@@ -152,7 +152,7 @@ export const StockInventory: React.FC = () => {
   const handleFinishAudit = () => {
     const adjustments = Object.entries(auditCounts).map(([id, actualStock]) => ({
       ingredientId: id,
-      actualStock: Number(actualStock)
+      actualStock: typeof actualStock === 'string' ? parseQuantity(actualStock) : Number(actualStock)
     }));
 
     performInventoryAudit(currentUser?.name || 'Auditor', adjustments, auditNotes);
@@ -577,8 +577,8 @@ export const StockInventory: React.FC = () => {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={auditCounts[ing.id] !== undefined ? quantityMask(auditCounts[ing.id]) : quantityMask(ing.currentStock)}
-                      onChange={(e) => setAuditCounts({ ...auditCounts, [ing.id]: parseQuantity(e.target.value) })}
+                      value={auditCounts[ing.id] !== undefined ? (typeof auditCounts[ing.id] === 'string' ? auditCounts[ing.id] : quantityMask(auditCounts[ing.id])) : quantityMask(ing.currentStock)}
+                      onChange={(e) => setAuditCounts({ ...auditCounts, [ing.id]: quantityMask(e.target.value) })}
                       className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-right focus:border-purple-500 focus:outline-none"
                     />
                   </div>
