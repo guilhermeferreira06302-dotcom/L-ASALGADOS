@@ -535,7 +535,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newAudit: InventoryAudit = {
       id: `aud-${Date.now()}`,
-      date: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
+      date: new Date().toISOString(),
       auditorName,
       itemsAudited: adjustments.length,
       discrepanciesCount: discrepancies,
@@ -557,7 +557,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ord-${Date.now()}`,
       orderNumber: highestNum + 1,
       status: 'EM_PREPARO',
-      createdAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      createdAt: new Date().toISOString()
     };
     const { error } = await supabase.from('orders').insert(newOrder);
     if (error) {

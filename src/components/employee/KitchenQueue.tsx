@@ -30,6 +30,14 @@ export const KitchenQueue: React.FC = () => {
     updateOrderStatus(orderId, nextStatus);
   };
 
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    return dateStr;
+  };
+
   const renderOrderCard = (o: Order) => {
     const isPrep = o.status === 'EM_PREPARO' || o.status === 'PENDENTE';
     const isReady = o.status === 'PRONTO';
@@ -58,7 +66,7 @@ export const KitchenQueue: React.FC = () => {
                   <span>{o.customerName}</span>
                 </p>
                 <span className="text-[11px] text-slate-700 flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-amber-400" /> {o.createdAt} ({o.orderType})
+                  <Clock className="w-3 h-3 text-amber-400" /> {formatTime(o.createdAt)} ({o.orderType})
                 </span>
               </div>
             </div>
