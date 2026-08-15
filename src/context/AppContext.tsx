@@ -424,89 +424,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adjustStock = async (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => {
     const targetIng = ingredients.find(i => i.id === ingredientId);
-    if (targetIng) {
-      const movement: StockMovement = {
-        id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: quantityChange > 0 ? 'ENTRADA' : 'SAIDA',
-        ingredientId: targetIng.id,
-        ingredientName: targetIng.name,
-        quantity: Math.abs(quantityChange),
-        unit: targetIng.unit,
-        reason: reason || 'Ajuste manual',
-        observation: observation || 'Sem observação',
-        paymentMethod,
-        operator: operatorName || currentUser?.name || 'Sistema',
-        date: new Date().toISOString(),
-        photo
-      };
-      const { error } = await supabase.from('stock_movements').insert(movement);
-      if (error) {
-        console.error('Erro ao registrar movimentação:', error);
-        alert('Erro ao salvar movimentação no banco: ' + error.message);
-        throw error;
-      }
-      setStockMovements(m => [movement, ...m]);
+    if (!targetIng) return;
+
+    // 1. Calcular o novo estado do insumo
+    const newStock = Math.max(0, targetIng.currentStock + quantityChange);
+    const updatedIng = {
+      ...targetIng,
+      currentStock: newStock,
+      lastUpdated: 'Agora mesmo',
+      hasReceivedEntry: quantityChange > 0 ? true : (targetIng.hasReceivedEntry ?? (targetIng.currentStock > 0)),
+      ...(operatorName ? { operator: operatorName } : {})
+    };
+
+    // 2. Atualizar ou Inserir (Upsert) o insumo no banco ANTES da movimentação
+    // Isso garante que se for um produto-insumo que ainda não existe no DB, ele será criado,
+    // evitando violação de chave estrangeira (foreign key) em stock_movements.
+    const { error: errorIng } = await supabase.from('ingredients').upsert(updatedIng);
+    if (errorIng) {
+      console.error('Erro ao atualizar estoque do insumo:', errorIng);
+      alert('Erro ao atualizar estoque no banco: ' + errorIng.message);
+      throw errorIng;
     }
 
-    const updatedIngredients = await Promise.all(ingredients.map(async ing => {
-      if (ing.id === ingredientId) {
-        const newStock = Math.max(0, ing.currentStock + quantityChange);
-        const updatedIng = {
-          ...ing,
-          currentStock: newStock,
-          lastUpdated: 'Agora mesmo',
-          hasReceivedEntry: quantityChange > 0 ? true : (ing.hasReceivedEntry ?? (ing.currentStock > 0)),
-          ...(operatorName ? { operator: operatorName } : {})
-        };
-        const { error } = await supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id);
-        if (error) {
-          console.error('Erro ao atualizar estoque do insumo:', error);
-          alert('Erro ao atualizar estoque no banco: ' + error.message);
-          throw error;
-        }
-        return updatedIng;
-      }
-      return ing;
-    }));
-    setIngredients(updatedIngredients);
+    // 3. Registrar a movimentação de estoque
+    const movement: StockMovement = {
+      id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: quantityChange > 0 ? 'ENTRADA' : 'SAIDA',
+      ingredientId: targetIng.id,
+      ingredientName: targetIng.name,
+      quantity: Math.abs(quantityChange),
+      unit: targetIng.unit,
+      reason: reason || 'Ajuste manual',
+      observation: observation || 'Sem observação',
+      paymentMethod,
+      operator: operatorName || currentUser?.name || 'Sistema',
+      date: new Date().toISOString(),
+      photo
+    };
+
+    const { error: errorMov } = await supabase.from('stock_movements').insert(movement);
+    if (errorMov) {
+      console.error('Erro ao registrar movimentação:', errorMov);
+      alert('Erro ao salvar movimentação no banco: ' + errorMov.message);
+      throw errorMov;
+    }
+
+    // 4. Atualizar estados locais
+    setStockMovements(m => [movement, ...m]);
+    setIngredients(prev => prev.map(i => i.id === ingredientId ? updatedIng : i));
 
     // If cost related / restock, can also optionally add a transaction
     if (quantityChange > 0 && reason?.includes('Compra')) {
-      const ing = updatedIngredients.find(i => i.id === ingredientId);
-      if (ing) {
-        await addTransaction({
-          date: new Date().toISOString().split('T')[0],
-          type: 'SAIDA',
-          category: 'FORNECEDOR',
-          amount: quantityChange * ing.costPerUnit,
-          description: `Reposição de Estoque: ${ing.name} (${quantityChange} ${ing.unit})`
-        });
-      }
+      await addTransaction({
+        date: new Date().toISOString().split('T')[0],
+        type: 'SAIDA',
+        category: 'FORNECEDOR',
+        amount: quantityChange * updatedIng.costPerUnit,
+        description: `Reposição de Estoque: ${updatedIng.name} (${quantityChange} ${updatedIng.unit})`
+      });
     }
 
     // Automatically create a financial loss record if reason is "Prejuízo"
     if (quantityChange < 0 && reason === 'Prejuízo') {
-      const ing = updatedIngredients.find(i => i.id === ingredientId);
-      if (ing) {
-        let unitValue = ing.costPerUnit;
-        if (ing.id.startsWith('ing-prod-')) {
-          const originalProdId = ing.id.replace('ing-prod-', '');
-          const originalProd = products.find(p => p.id === originalProdId);
-          if (originalProd) {
-            // Using price (valor do produto cadastrado) as requested, or costPrice if more appropriate. 
-            // The user said "valor do produto cadastrado", which usually implies the sale price.
-            unitValue = originalProd.price > 0 ? originalProd.price : (originalProd.costPrice || 0);
-          }
+      let unitValue = updatedIng.costPerUnit;
+      if (updatedIng.id.startsWith('ing-prod-')) {
+        const originalProdId = updatedIng.id.replace('ing-prod-', '');
+        const originalProd = products.find(p => p.id === originalProdId);
+        if (originalProd) {
+          // Using price (valor do produto cadastrado) as requested, or costPrice if more appropriate. 
+          // The user said "valor do produto cadastrado", which usually implies the sale price.
+          unitValue = originalProd.price > 0 ? originalProd.price : (originalProd.costPrice || 0);
         }
-
-        await addTransaction({
-          date: new Date().toISOString().split('T')[0],
-          type: 'SAIDA',
-          category: 'PREJUIZO',
-          amount: Math.abs(quantityChange) * unitValue,
-          description: `Prejuízo de Estoque: ${ing.name} (${Math.abs(quantityChange)} ${ing.unit})`
-        });
       }
+
+      await addTransaction({
+        date: new Date().toISOString().split('T')[0],
+        type: 'SAIDA',
+        category: 'PREJUIZO',
+        amount: Math.abs(quantityChange) * unitValue,
+        description: `Prejuízo de Estoque: ${updatedIng.name} (${Math.abs(quantityChange)} ${updatedIng.unit})`
+      });
     }
   };
 
@@ -523,7 +520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           currentStock: adj.actualStock,
           lastUpdated: `Auditado por ${auditorName}`
         };
-        const { error } = await supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id);
+        const { error } = await supabase.from('ingredients').upsert(updatedIng);
         if (error) {
            console.error('Erro ao atualizar estoque na auditoria:', error);
            alert('Erro ao salvar auditoria no banco: ' + error.message);
