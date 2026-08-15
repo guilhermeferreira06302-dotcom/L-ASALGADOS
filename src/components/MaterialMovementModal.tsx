@@ -330,40 +330,42 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                <span>Data</span>
-              </label>
-              <input
-                type="date"
-                required
-                disabled
-                readOnly
-                max={new Date().toISOString().split('T')[0]}
-                value={matDate}
-                onChange={(e) => setMatDate(e.target.value)}
-                className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
-              />
-            </div>
+          {currentUser?.role === 'ADMIN' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Data</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  disabled
+                  readOnly
+                  max={new Date().toISOString().split('T')[0]}
+                  value={matDate}
+                  onChange={(e) => setMatDate(e.target.value)}
+                  className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                <span>Hora</span>
-              </label>
-              <input
-                type="time"
-                required
-                disabled
-                readOnly
-                value={matTime}
-                onChange={(e) => setMatTime(e.target.value)}
-                className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
-              />
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Hora</span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  disabled
+                  readOnly
+                  value={matTime}
+                  onChange={(e) => setMatTime(e.target.value)}
+                  className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {type === 'SAIDA' && (
             <div>
