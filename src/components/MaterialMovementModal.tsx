@@ -107,6 +107,19 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
       return;
     }
 
+    if (type === 'SAIDA') {
+      for (const item of items) {
+        if (!item.selectedMatId || !item.matQty) continue;
+        const qtyNum = parseQuantity(item.matQty);
+        if (qtyNum <= 0) continue;
+        const targetIng = ingredients.find(i => i.id === item.selectedMatId);
+        if (targetIng && qtyNum > targetIng.currentStock) {
+          alert(`Estoque divergente!\nNão é possível retirar ${qtyNum} ${targetIng.unit} de "${targetIng.name}".\nO estoque atual é de apenas ${targetIng.currentStock} ${targetIng.unit}.`);
+          return;
+        }
+      }
+    }
+
     let successCount = 0;
     
     items.forEach((item, index) => {
