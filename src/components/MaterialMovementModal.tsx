@@ -308,7 +308,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                           } else if (val === 'Pegou Fiado') {
                             setOutflowReason('Outros');
                             setPhotos([]);
-                          } else if (val === 'Dinheiro' || val === 'Cartão') {
+                          } else if (val === 'Dinheiro' || val === 'Cartão' || val === 'PIX') {
                             setOutflowReason('Venda');
                             setPhotos([]);
                           }
@@ -317,6 +317,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
                       >
                         <option value="" disabled hidden>Selecione o pagamento...</option>
+                        <option value="PIX">PIX</option>
                         <option value="Dinheiro">Dinheiro</option>
                         <option value="Cartão">Cartão</option>
                         <option value="Pegou Fiado">Pegou Fiado</option>

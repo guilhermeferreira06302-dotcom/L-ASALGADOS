@@ -66,7 +66,7 @@ const MainContent: React.FC = () => {
   const getSectionTitle = () => {
     if (activePortal === 'FUNCIONARIO') {
       if (employeeTab === 'SHIFT') return !currentShift ? 'Abertura de Turno' : 'Gestão do Turno Atual';
-      return 'Terminal do Operador / PDV';
+      return '';
     }
     switch (adminTab) {
       case 'DASHBOARD': return 'Visão Geral & Gráficos de Desempenho';
@@ -103,23 +103,22 @@ const MainContent: React.FC = () => {
         
         {/* Unified Top Header Bar with Hamburger Button */}
         {!(activePortal === 'FUNCIONARIO' && employeeAction !== null) && (
-          <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
-            <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5">
-
-              <div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+          <header className="sticky top-0 z-30 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
+            <div className="flex items-center justify-center w-full">
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="flex items-center justify-center gap-2 text-2xl font-black text-slate-900 tracking-wide">
                   <span>L&A SALGADOS</span>
-                  <span className="text-slate-700 hidden sm:inline">•</span>
-                  <span className="text-amber-400 font-bold hidden sm:inline">Módulo {activePortal === 'ADMIN' ? 'Administrativo' : 'Operacional'}</span>
+                  <span className="text-slate-700 hidden sm:inline text-sm font-semibold">•</span>
+                  <span className="text-amber-500 font-bold hidden sm:inline text-sm">Módulo {activePortal === 'ADMIN' ? 'Administrativo' : 'Operacional'}</span>
                 </div>
-                <h1 className="text-sm sm:text-lg font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span>{getSectionTitle()}</span>
-                </h1>
+                {getSectionTitle() && (
+                  <h1 className="text-sm sm:text-base font-bold text-slate-700 flex items-center justify-center gap-2 mt-0.5">
+                    <span>{getSectionTitle()}</span>
+                  </h1>
+                )}
               </div>
             </div>
-          </div>
-        </header>
+          </header>
       )}
 
         {/* Workspace Content */}
