@@ -7,11 +7,11 @@ import {
 import { StockMovementType } from '../../types';
 
 export const StockMovements: React.FC = () => {
-  const { stockMovements } = useApp();
+  const { stockMovements, ingredients, products } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | StockMovementType>('ALL');
   const [filterOperator, setFilterOperator] = useState('ALL');
-  const [filterReason, setFilterReason] = useState('ALL');
+  const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterPaymentMethod, setFilterPaymentMethod] = useState('ALL');
 
   // Date filter states
@@ -30,8 +30,17 @@ export const StockMovements: React.FC = () => {
     return dateStr;
   };
 
+  const getCategoryForMovement = (mov: any) => {
+    if (mov.ingredientId.startsWith('ing-prod-')) {
+      const p = products.find(prod => prod.id === mov.ingredientId.replace('ing-prod-', ''));
+      return p?.category || 'Desconhecida';
+    }
+    const ing = ingredients.find(i => i.id === mov.ingredientId);
+    return ing?.category || 'Desconhecida';
+  };
+
   const uniqueOperators = Array.from(new Set(stockMovements.map(m => m.operator))).sort();
-  const uniqueReasons = Array.from(new Set(stockMovements.map(m => m.reason))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
+  const uniqueCategories = Array.from(new Set(stockMovements.map(getCategoryForMovement))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
   const uniquePaymentMethods = Array.from(new Set(stockMovements.map(m => m.paymentMethod))).filter(r => typeof r === 'string' && r.trim() !== '').sort();
 
   const filteredMovements = stockMovements.filter(mov => {
@@ -45,7 +54,7 @@ export const StockMovements: React.FC = () => {
       return false;
     }
 
-    if (filterReason !== 'ALL' && mov.reason !== filterReason) {
+    if (filterCategory !== 'ALL' && getCategoryForMovement(mov) !== filterCategory) {
       return false;
     }
 
@@ -308,19 +317,19 @@ export const StockMovements: React.FC = () => {
             </div>
           )}
 
-          {uniqueReasons.length > 0 && (
+          {uniqueCategories.length > 0 && (
             <div className="relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <FileText className="w-4 h-4 text-slate-500" />
+                <Filter className="w-4 h-4 text-slate-500" />
               </div>
               <select
-                value={filterReason}
-                onChange={(e) => setFilterReason(e.target.value)}
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
                 className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
               >
-                <option value="ALL">Todos os Motivos</option>
-                {uniqueReasons.map(r => (
-                  <option key={r} value={r} title={r}>{r}</option>
+                <option value="ALL">Todas as Categorias</option>
+                {uniqueCategories.map(c => (
+                  <option key={c} value={c} title={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -355,6 +364,7 @@ export const StockMovements: React.FC = () => {
                 <th className="py-3.5 px-5">Data e Hora</th>
                 <th className="py-3.5 px-5">Operação</th>
                 <th className="py-3.5 px-5">Produto</th>
+                <th className="py-3.5 px-5">Categoria</th>
                 <th className="py-3.5 px-5">Quantidade</th>
                 <th className="py-3.5 px-5">Motivo</th>
                 <th className="py-3.5 px-5">Observação</th>
@@ -365,7 +375,7 @@ export const StockMovements: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500 text-sm">
+                  <td colSpan={9} className="py-8 text-center text-slate-500 text-sm">
                     Nenhuma movimentação encontrada para os filtros aplicados.
                   </td>
                 </tr>
@@ -388,6 +398,11 @@ export const StockMovements: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-5 font-bold text-slate-900">
                       {mov.ingredientName}
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-700">
+                        {getCategoryForMovement(mov)}
+                      </span>
                     </td>
                     <td className="py-3.5 px-5">
                       <span className="font-extrabold text-slate-900">
