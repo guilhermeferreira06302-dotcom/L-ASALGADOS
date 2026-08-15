@@ -274,7 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             supplier: 'Cadastrado via Produtos',
             lastUpdated: new Date().toISOString(),
             hasReceivedEntry: false,
-            operator: currentUser?.name || 'Carlos Mendes'
+            operator: currentUser?.name || 'Sistema'
           });
           changed = true;
         }

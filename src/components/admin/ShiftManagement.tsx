@@ -67,7 +67,7 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                   <th className="py-3 px-4">Tempo Trab.</th>
                   <th className="py-3 px-4">Fundo Inicial</th>
                   <th className="py-3 px-4 text-right">Vendas (Dinheiro)</th>
-                  <th className="py-3 px-4 text-right">Vendas (Cartão)</th>
+                  <th className="py-3 px-4 text-right">Vendas (Cartão/PIX)</th>
                   <th className="py-3 px-4 text-right">Total Vendas</th>
                   <th className="py-3 px-4 text-right rounded-tr-xl">Ação</th>
                 </tr>
@@ -315,7 +315,7 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                  Quanto vendeu em Cartão?
+                  Quanto vendeu em Cartão/PIX?
                 </label>
                 <div className="relative">
                   <DollarSign className="w-5 h-5 absolute left-3.5 top-3 text-slate-400" />

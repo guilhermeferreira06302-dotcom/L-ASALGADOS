@@ -532,9 +532,9 @@ export const StockInventory: React.FC = () => {
                       <td className="py-3.5 px-5">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs whitespace-nowrap shadow-2xs">
                           <div className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-[9px]">
-                            {(ing.operator || 'Carlos Mendes').charAt(0).toUpperCase()}
+                            {(ing.operator || 'Sistema').charAt(0).toUpperCase()}
                           </div>
-                          <span>{ing.operator || 'Carlos Mendes'}</span>
+                          <span>{ing.operator || 'Sistema'}</span>
                         </div>
                       </td>
                     </tr>
