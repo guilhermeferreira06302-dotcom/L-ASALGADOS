@@ -300,7 +300,16 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                       </label>
                       <select
                         value={item.paymentMethod}
-                        onChange={(e) => updateItem(item.id, 'paymentMethod', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateItem(item.id, 'paymentMethod', val);
+                          if (val === 'Prejuízo') {
+                            setOutflowReason('Prejuízo');
+                          } else if (val === 'Pegou Fiado') {
+                            setOutflowReason('Outros');
+                            setPhotos([]);
+                          }
+                        }}
                         required
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
                       >
@@ -382,7 +391,8 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                   }
                 }}
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+                disabled={items.some(i => i.paymentMethod === 'Prejuízo' || i.paymentMethod === 'Pegou Fiado')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none transition disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="" disabled hidden>Selecione o motivo...</option>
                 <option value="Venda">Venda</option>
