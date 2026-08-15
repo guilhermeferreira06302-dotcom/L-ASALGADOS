@@ -27,7 +27,7 @@ const MainContent: React.FC = () => {
     return sessionStorage.getItem('sabor_gestao_adminTab') || 'DASHBOARD';
   });
   const [employeeTab, setEmployeeTab] = useState<'SHIFT' | 'OPERACAO'>(() => {
-    return (sessionStorage.getItem('sabor_gestao_employeeTab') as any) || 'SHIFT';
+    return (sessionStorage.getItem('sabor_gestao_employeeTab') as any) || 'OPERACAO';
   });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
@@ -167,7 +167,7 @@ const MainContent: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {employeeTab === 'SHIFT' && <ShiftManagement />}
+              {employeeTab === 'SHIFT' && <ShiftManagement onNavigateBack={() => setEmployeeTab('OPERACAO')} />}
               {employeeTab === 'OPERACAO' && (
                 (!currentShift && currentUser.role === 'FUNCIONARIO') ? (
                   <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300">
@@ -183,7 +183,10 @@ const MainContent: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <EmployeePortal onActionChange={setEmployeeAction} />
+                  <EmployeePortal 
+                    onActionChange={setEmployeeAction} 
+                    onNavigateToShift={() => setEmployeeTab('SHIFT')} 
+                  />
                 )
               )}
             </div>

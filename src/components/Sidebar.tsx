@@ -247,40 +247,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Lock className={`w-4 h-4 ${adminTab === 'ACESSOS' ? 'text-red-500' : 'text-slate-700'}`} />
                   <span>Acessos</span>
                 </div>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">
-                Menu Operacional
-              </div>
-              <button
-                onClick={() => { setEmployeeTab('SHIFT'); setIsMobileOpen(false); }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  employeeTab === 'SHIFT'
-                    ? 'bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 text-emerald-400 border-l-4 border-emerald-500 shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Clock className={`w-4 h-4 ${employeeTab === 'SHIFT' ? 'text-emerald-400' : 'text-slate-700'}`} />
-                  <span>Início / Fechamento Turno</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => { setEmployeeTab('OPERACAO'); setIsMobileOpen(false); }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  employeeTab === 'OPERACAO'
-                    ? 'bg-gradient-to-r from-blue-500/15 to-blue-500/5 text-blue-500 border-l-4 border-blue-500 shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Package className={`w-4 h-4 ${employeeTab === 'OPERACAO' ? 'text-blue-500' : 'text-slate-700'}`} />
-                  <span>Operação Entrada/Saída</span>
-                </div>
-              </button>
             </div>
           )}
 

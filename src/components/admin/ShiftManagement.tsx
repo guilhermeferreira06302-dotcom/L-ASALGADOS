@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
-export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminView }) => {
+export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?: () => void }> = ({ isAdminView, onNavigateBack }) => {
   const { currentShift, openShift, closeShift, cancelShift, addTransaction, currentUser, shifts } = useApp();
   
   // Abertura states
@@ -179,6 +179,18 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean }> = ({ isAdminVi
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300">
       
+      {!isAdminView && onNavigateBack && (
+        <div className="w-full max-w-md mx-auto mb-6 flex justify-start">
+          <button 
+            onClick={onNavigateBack}
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para Operação
+          </button>
+        </div>
+      )}
+
       {!isAdminView && !currentShift && (
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-md w-full space-y-6">
           <div className="flex flex-col items-center text-center">

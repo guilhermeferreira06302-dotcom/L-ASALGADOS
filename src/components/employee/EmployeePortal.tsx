@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Clock } from 'lucide-react';
 import { MaterialMovementModal } from '../MaterialMovementModal';
 
 interface EmployeePortalProps {
   onActionChange?: (action: 'ENTRADA' | 'SAIDA' | null) => void;
+  onNavigateToShift?: () => void;
 }
 
-export const EmployeePortal: React.FC<EmployeePortalProps> = ({ onActionChange }) => {
-  const { currentUser } = useApp();
+export const EmployeePortal: React.FC<EmployeePortalProps> = ({ onActionChange, onNavigateToShift }) => {
+  const { currentUser, currentShift } = useApp();
   const [materialModalType, setMaterialModalType] = useState<'ENTRADA' | 'SAIDA' | null>(null);
 
   const handleSetModalType = (type: 'ENTRADA' | 'SAIDA' | null) => {
@@ -66,6 +67,23 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({ onActionChange }
               </div>
               <span>Saída de Material</span>
             </button>
+
+            {onNavigateToShift && (
+              <button
+                type="button"
+                onClick={onNavigateToShift}
+                className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white font-extrabold text-sm shadow-md transition cursor-pointer border text-center mt-4 ${
+                  currentShift 
+                    ? 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 border-rose-600/20' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-blue-600/20'
+                }`}
+              >
+                <div className="p-1.5 bg-white/20 rounded-md">
+                  <Clock className="w-5 h-5 stroke-[3]" />
+                </div>
+                <span>{currentShift ? 'Gerenciar / Fechar Turno' : 'Iniciar Turno'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
