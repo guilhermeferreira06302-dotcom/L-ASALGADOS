@@ -121,6 +121,47 @@ export const FinancialAnalysis: React.FC = () => {
 
   const balance = totalIn - (manualOut + stockCogs) - totalLoss;
 
+  const stockSalesTransactions: FinancialTransaction[] = filteredMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
+    .map(m => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return {
+         id: `virt-sale-${m.id}`,
+         date: m.date,
+         type: 'ENTRADA',
+         category: 'VENDAS',
+         amount: ((prod?.price || 0) * m.quantity),
+         description: `Faturamento de Estoque: ${m.ingredientName} (${m.quantity} un) - ${m.paymentMethod || 'Dinheiro'}`
+       } as FinancialTransaction;
+    });
+
+  const stockFiadoTransactions: FinancialTransaction[] = filteredMovements
+    .filter(m => m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
+    .map(m => {
+       const prodId = m.ingredientId.replace('ing-prod-', '');
+       const prod = products.find(p => p.id === prodId);
+       return {
+         id: `virt-fiado-${m.id}`,
+         date: m.date,
+         type: 'ENTRADA',
+         category: 'VENDAS',
+         amount: ((prod?.price || 0) * m.quantity),
+         description: `Saldo Pendente (Fiado): ${m.ingredientName} (${m.quantity} un)`
+       } as FinancialTransaction;
+    });
+
+  const allDisplayTransactions = [...filtered, ...stockSalesTransactions, ...stockFiadoTransactions]
+    .filter(t => {
+      if (t.id.startsWith('virt-')) {
+        if (filterType !== 'TODOS' && t.type !== filterType) return false;
+        if (filterCategory !== 'TODAS' && t.category !== filterCategory) return false;
+        if (searchTerm && !t.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description) return;
@@ -441,14 +482,14 @@ export const FinancialAnalysis: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-800">
-              {filtered.length === 0 ? (
+              {allDisplayTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-slate-700 text-xs">
                     Nenhum lançamento encontrado com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
-                filtered.map(tx => (
+                allDisplayTransactions.map(tx => (
                   <tr key={tx.id} className="hover:bg-slate-100/40 transition">
                     <td className="py-3.5 px-5 text-xs text-slate-700 flex items-center gap-1.5 whitespace-nowrap">
                       <Calendar className="w-3.5 h-3.5" />
@@ -463,14 +504,28 @@ export const FinancialAnalysis: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${
-                        tx.type === 'ENTRADA' 
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
-                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                      }`}>
-                        {tx.type === 'ENTRADA' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {tx.type}
-                      </span>
+                      {(() => {
+                        let text = tx.type;
+                        let colorClass = tx.type === 'ENTRADA' 
+                          ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' 
+                          : 'bg-red-500/20 text-red-500 border border-red-500/30';
+                        let Icon = tx.type === 'ENTRADA' ? ArrowUpRight : ArrowDownRight;
+
+                        if (tx.category === 'PREJUIZO') {
+                          text = 'PREJUÍZO';
+                          colorClass = 'bg-rose-500/20 text-rose-500 border border-rose-500/30';
+                        } else if (tx.id.startsWith('virt-fiado-')) {
+                          text = 'PENDENTE';
+                          colorClass = 'bg-orange-500/20 text-orange-500 border border-orange-500/30';
+                        }
+
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${colorClass}`}>
+                            <Icon className="w-3 h-3" />
+                            {text}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className={`py-3.5 px-5 text-right font-extrabold ${tx.type === 'ENTRADA' ? 'text-emerald-400' : 'text-red-400'}`}>
                       {tx.type === 'ENTRADA' ? '+ ' : '- '}R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

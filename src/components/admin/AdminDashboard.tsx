@@ -231,7 +231,6 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
               const marginPct = ((profitPerUnit / prod.price) * 100).toFixed(0);
               return (
                 <div key={prod.id} className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50/60 border border-slate-200/80 hover:border-slate-300 transition">
-                  <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900 truncate">{prod.name}</p>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-700">

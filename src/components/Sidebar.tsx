@@ -78,17 +78,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-200/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-slate-950 shadow-md shadow-amber-500/20 text-xl flex-shrink-0">
-              🍔
-            </div>
+
             <div className="min-w-0">
               <h1 className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-1.5 truncate">
                 <span>L&A SALGADOS</span>
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                  PRO v2.5
-                </span>
+
                 <span className="text-[11px] text-slate-700 truncate">ERP Lanchonete</span>
               </div>
             </div>
