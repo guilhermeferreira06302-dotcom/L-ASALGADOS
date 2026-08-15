@@ -11,7 +11,7 @@ import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { ShiftManagement } from './components/admin/ShiftManagement';
 import { AccessManagement } from './components/admin/AccessManagement';
 import { EmployeePortal } from './components/employee/EmployeePortal';
-import { Lock } from 'lucide-react';
+import { Lock, Menu } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { currentUser, currentShift } = useApp();
@@ -104,7 +104,15 @@ const MainContent: React.FC = () => {
         {/* Unified Top Header Bar with Hamburger Button */}
         {!(activePortal === 'FUNCIONARIO' && employeeAction !== null) && (
           <header className="sticky top-0 z-30 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center w-full relative">
+              <button 
+                onClick={() => setIsMobileOpen(true)}
+                className="absolute left-0 p-2.5 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-800 transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center group"
+                title="Abrir Menu"
+                aria-label="Abrir Menu"
+              >
+                <Menu className="w-6 h-6 transition-transform group-hover:scale-110" />
+              </button>
               <div className="flex flex-col items-center justify-center text-center">
                 <div className="flex items-center justify-center gap-2 text-2xl font-black text-slate-900 tracking-wide">
                   <span>L&A SALGADOS</span>
