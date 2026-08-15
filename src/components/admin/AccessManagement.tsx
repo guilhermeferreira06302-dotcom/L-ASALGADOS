@@ -63,10 +63,12 @@ export const AccessManagement: React.FC = () => {
       ...user,
       name: editName,
       password: editPassword
+    }).then(() => {
+      showMessage(`Credenciais atualizadas com sucesso!`);
+      setEditingUserId(null);
+    }).catch((e: any) => {
+      showMessage('Erro ao atualizar. Tente novamente.', true);
     });
-
-    showMessage(`Credenciais atualizadas com sucesso!`);
-    setEditingUserId(null);
   };
 
   const handleCreate = () => {
@@ -87,12 +89,14 @@ export const AccessManagement: React.FC = () => {
       role: newRole,
       position: newRole === 'ADMIN' ? 'Administrador' : 'Funcionário',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    }).then(() => {
+      showMessage(`Acesso para ${newName} criado com sucesso!`);
+      setIsCreating(false);
+      setNewName('');
+      setNewPassword('');
+    }).catch(() => {
+      showMessage('Erro ao criar usuário.', true);
     });
-
-    showMessage(`Acesso para ${newName} criado com sucesso!`);
-    setIsCreating(false);
-    setNewName('');
-    setNewPassword('');
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -101,8 +105,11 @@ export const AccessManagement: React.FC = () => {
       return;
     }
     if (confirm(`Tem certeza que deseja excluir o acesso de ${name}?`)) {
-      deleteUser(id);
-      showMessage(`Acesso de ${name} excluído com sucesso!`);
+      deleteUser(id).then(() => {
+        showMessage(`Acesso de ${name} excluído com sucesso!`);
+      }).catch(() => {
+        showMessage('Erro ao excluir usuário.', true);
+      });
     }
   };
 

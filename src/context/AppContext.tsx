@@ -132,6 +132,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadData();
   }, []);
 
+  // Sincronização em tempo real (Realtime)
+  useEffect(() => {
+    const channel = supabase.channel('public-changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        const { table, eventType, new: newRec, old: oldRec } = payload;
+
+        // Helper para atualizar os estados locais com base no tipo de evento
+        const applyChange = (setStateFunc: React.Dispatch<React.SetStateAction<any[]>>, idField = 'id') => {
+          setStateFunc((prev: any[]) => {
+            if (eventType === 'INSERT') {
+              // Evita duplicatas caso quem inseriu foi o próprio usuário atual
+              if (prev.find(item => item[idField] === newRec[idField])) return prev;
+              return [newRec, ...prev];
+            } else if (eventType === 'UPDATE') {
+              return prev.map(item => item[idField] === newRec[idField] ? newRec : item);
+            } else if (eventType === 'DELETE') {
+              return prev.filter(item => item[idField] !== oldRec[idField]);
+            }
+            return prev;
+          });
+        };
+
+        switch (table) {
+          case 'users':
+            applyChange(setUsers);
+            break;
+          case 'products':
+            applyChange(setProducts);
+            break;
+          case 'ingredients':
+            applyChange(setIngredients);
+            break;
+          case 'orders':
+            applyChange(setOrders);
+            break;
+          case 'transactions':
+            applyChange(setTransactions);
+            break;
+          case 'stock_movements':
+            applyChange(setStockMovements);
+            break;
+          case 'inventory_audits':
+            applyChange(setAudits);
+            break;
+          case 'custom_categories':
+            supabase.from('custom_categories').select('*').then(({data}) => {
+                if (data) setCustomCategories(data.map((c: any) => c.name));
+            });
+            break;
+          case 'shifts':
+            if (eventType === 'INSERT' || eventType === 'UPDATE') {
+              if (newRec.status === 'OPEN') {
+                setCurrentShift(newRec as Shift);
+              } else {
+                setCurrentShift(prev => prev?.id === newRec.id ? null : prev);
+                setShifts(prev => {
+                  const filtered = prev.filter(s => s.id !== newRec.id);
+                  return [newRec as Shift, ...filtered];
+                });
+              }
+            } else if (eventType === 'DELETE') {
+              setShifts(prev => prev.filter(s => s.id !== oldRec.id));
+              setCurrentShift(prev => prev?.id === oldRec.id ? null : prev);
+            }
+            break;
+        }
+
+        setLastSyncTime(new Date().toLocaleTimeString());
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Conectado ao Supabase Realtime!');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
 
 
   // Cruzamento estrito: A aba de Estoque (ingredients) deve conter APENAS o que está cadastrado na aba de Produtos
@@ -223,8 +303,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const updateUser = (updatedUser: User) => {
-    supabase.from('users').update(updatedUser).eq('id', updatedUser.id).then();
+  const updateUser = async (updatedUser: User) => {
+    const { error } = await supabase.from('users').update(updatedUser).eq('id', updatedUser.id);
+    if (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      alert('Erro ao salvar alterações no banco: ' + error.message);
+      throw error;
+    }
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     if (currentUser?.id === updatedUser.id) {
       setCurrentUser(updatedUser);
@@ -232,21 +317,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addUser = (userData: Omit<User, 'id'>) => {
+  const addUser = async (userData: Omit<User, 'id'>) => {
     const newUser: User = {
       ...userData,
       id: `usr-${Date.now()}`
     };
-    supabase.from('users').insert(newUser).then();
+    const { error } = await supabase.from('users').insert(newUser);
+    if (error) {
+      console.error('Erro ao criar usuário:', error);
+      alert('Erro ao salvar no banco de dados: ' + error.message);
+      throw error;
+    }
     setUsers(prev => [...prev, newUser]);
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     if (currentUser?.id === id) {
       alert("Você não pode excluir o seu próprio acesso atual.");
       return;
     }
-    supabase.from('users').delete().eq('id', id).then();
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) {
+      console.error('Erro ao deletar usuário:', error);
+      alert('Erro ao excluir no banco de dados: ' + error.message);
+      throw error;
+    }
     setUsers(prev => prev.filter(u => u.id !== id));
   };
 
@@ -266,43 +361,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sessionStorage.setItem('sabor_gestao_currentUser', JSON.stringify(updated));
   };
 
-  const addProduct = (prodData: Omit<Product, 'id'>) => {
+  const addProduct = async (prodData: Omit<Product, 'id'>) => {
     const newProd: Product = {
       ...prodData,
       id: `prod-${Date.now()}`,
     };
-    supabase.from('products').insert(newProd).then();
+    const { error } = await supabase.from('products').insert(newProd);
+    if (error) {
+      console.error('Erro ao adicionar produto:', error);
+      alert('Erro ao salvar produto no banco: ' + error.message);
+      throw error;
+    }
     setProducts(prev => [newProd, ...prev]);
   };
 
-  const updateProduct = (updated: Product) => {
-    supabase.from('products').update(updated).eq('id', updated.id).then();
+  const updateProduct = async (updated: Product) => {
+    const { error } = await supabase.from('products').update(updated).eq('id', updated.id);
+    if (error) {
+      console.error('Erro ao atualizar produto:', error);
+      alert('Erro ao atualizar produto no banco: ' + error.message);
+      throw error;
+    }
     setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
-  const deleteProduct = (id: string) => {
-    supabase.from('products').delete().eq('id', id).then();
+  const deleteProduct = async (id: string) => {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error('Erro ao deletar produto:', error);
+      alert('Erro ao excluir produto no banco: ' + error.message);
+      throw error;
+    }
     setProducts(prev => prev.filter(p => p.id !== id));
   };
 
-  const addIngredient = (ingData: Omit<Ingredient, 'id' | 'lastUpdated'>) => {
+  const addIngredient = async (ingData: Omit<Ingredient, 'id' | 'lastUpdated'>) => {
     const newIng: Ingredient = {
       ...ingData,
       unit: 'un',
       id: `ing-${Date.now()}`,
       lastUpdated: 'Agora mesmo'
     };
-    supabase.from('ingredients').insert(newIng).then();
+    const { error } = await supabase.from('ingredients').insert(newIng);
+    if (error) {
+      console.error('Erro ao adicionar insumo:', error);
+      alert('Erro ao salvar insumo no banco: ' + error.message);
+      throw error;
+    }
     setIngredients(prev => [newIng, ...prev]);
   };
 
-  const updateIngredient = (updated: Ingredient) => {
+  const updateIngredient = async (updated: Ingredient) => {
     const toUpdate = { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
-    supabase.from('ingredients').update(toUpdate).eq('id', toUpdate.id).then();
+    const { error } = await supabase.from('ingredients').update(toUpdate).eq('id', toUpdate.id);
+    if (error) {
+      console.error('Erro ao atualizar insumo:', error);
+      alert('Erro ao atualizar insumo no banco: ' + error.message);
+      throw error;
+    }
     setIngredients(prev => prev.map(i => i.id === updated.id ? toUpdate as Ingredient : i));
   };
 
-  const adjustStock = (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => {
+  const adjustStock = async (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => {
     const targetIng = ingredients.find(i => i.id === ingredientId);
     if (targetIng) {
       const movement: StockMovement = {
@@ -319,11 +439,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date: new Date().toISOString(),
         photo
       };
-      supabase.from('stock_movements').insert(movement).then();
+      const { error } = await supabase.from('stock_movements').insert(movement);
+      if (error) {
+        console.error('Erro ao registrar movimentação:', error);
+        alert('Erro ao salvar movimentação no banco: ' + error.message);
+        throw error;
+      }
       setStockMovements(m => [movement, ...m]);
     }
 
-    setIngredients(prev => prev.map(ing => {
+    const updatedIngredients = await Promise.all(ingredients.map(async ing => {
       if (ing.id === ingredientId) {
         const newStock = Math.max(0, ing.currentStock + quantityChange);
         const updatedIng = {
@@ -333,17 +458,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           hasReceivedEntry: quantityChange > 0 ? true : (ing.hasReceivedEntry ?? (ing.currentStock > 0)),
           ...(operatorName ? { operator: operatorName } : {})
         };
-        supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id).then();
+        const { error } = await supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id);
+        if (error) {
+          console.error('Erro ao atualizar estoque do insumo:', error);
+          alert('Erro ao atualizar estoque no banco: ' + error.message);
+          throw error;
+        }
         return updatedIng;
       }
       return ing;
     }));
+    setIngredients(updatedIngredients);
 
     // If cost related / restock, can also optionally add a transaction
     if (quantityChange > 0 && reason?.includes('Compra')) {
-      const ing = ingredients.find(i => i.id === ingredientId);
+      const ing = updatedIngredients.find(i => i.id === ingredientId);
       if (ing) {
-        addTransaction({
+        await addTransaction({
           date: new Date().toISOString().split('T')[0],
           type: 'SAIDA',
           category: 'FORNECEDOR',
@@ -355,7 +486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Automatically create a financial loss record if reason is "Prejuízo"
     if (quantityChange < 0 && reason === 'Prejuízo') {
-      const ing = ingredients.find(i => i.id === ingredientId);
+      const ing = updatedIngredients.find(i => i.id === ingredientId);
       if (ing) {
         let unitValue = ing.costPerUnit;
         if (ing.id.startsWith('ing-prod-')) {
@@ -368,7 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        addTransaction({
+        await addTransaction({
           date: new Date().toISOString().split('T')[0],
           type: 'SAIDA',
           category: 'PREJUIZO',
@@ -379,20 +510,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const performInventoryAudit = (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => {
+  const performInventoryAudit = async (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => {
     let discrepancies = 0;
-    setIngredients(prev => prev.map(ing => {
+    
+    // Process all ingredient updates asynchronously
+    const updatedIngredients = await Promise.all(ingredients.map(async ing => {
       const adj = adjustments.find(a => a.ingredientId === ing.id);
       if (adj && adj.actualStock !== ing.currentStock) {
         discrepancies++;
-        return {
+        const updatedIng = {
           ...ing,
           currentStock: adj.actualStock,
           lastUpdated: `Auditado por ${auditorName}`
         };
+        const { error } = await supabase.from('ingredients').update(updatedIng).eq('id', updatedIng.id);
+        if (error) {
+           console.error('Erro ao atualizar estoque na auditoria:', error);
+           alert('Erro ao salvar auditoria no banco: ' + error.message);
+           throw error;
+        }
+        return updatedIng;
       }
       return ing;
     }));
+    setIngredients(updatedIngredients);
 
     const newAudit: InventoryAudit = {
       id: `aud-${Date.now()}`,
@@ -402,11 +543,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       discrepanciesCount: discrepancies,
       notes: notes || 'Contagem geral finalizada.'
     };
-    supabase.from('inventory_audits').insert(newAudit).then();
+    const { error } = await supabase.from('inventory_audits').insert(newAudit);
+    if (error) {
+      console.error('Erro ao salvar auditoria:', error);
+      alert('Erro ao registrar auditoria no banco: ' + error.message);
+      throw error;
+    }
     setAudits(prev => [newAudit, ...prev]);
   };
 
-  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Order => {
+  const createOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Promise<Order> => {
     const highestNum = orders.reduce((max, o) => Math.max(max, o.orderNumber), 100);
     const newOrder: Order = {
       ...orderData,
@@ -415,11 +561,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'EM_PREPARO',
       createdAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
-    supabase.from('orders').insert(newOrder).then();
+    const { error } = await supabase.from('orders').insert(newOrder);
+    if (error) {
+      console.error('Erro ao criar pedido:', error);
+      alert('Erro ao salvar pedido no banco: ' + error.message);
+      throw error;
+    }
     setOrders(prev => [newOrder, ...prev]);
 
     // Add financial entry immediately or upon delivery
-    addTransaction({
+    await addTransaction({
       date: new Date().toISOString().split('T')[0],
       type: 'ENTRADA',
       category: 'VENDAS',
@@ -431,28 +582,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     const targetOrder = orders.find(o => o.id === orderId);
     if (!targetOrder) return;
 
     // Ao entregar o pedido, deduz a quantidade vendida direto do estoque do produto correspondente!
     if (newStatus === 'ENTREGUE' && targetOrder.status !== 'ENTREGUE') {
-      targetOrder.items.forEach(item => {
+      await Promise.all(targetOrder.items.map(async item => {
         const targetIngId = `ing-prod-${item.productId}`;
-        adjustStock(targetIngId, -item.quantity, 'Venda', undefined, `Pedido #${targetOrder.orderNumber}`);
-      });
+        await adjustStock(targetIngId, -item.quantity, 'Venda', undefined, `Pedido #${targetOrder.orderNumber}`);
+      }));
     }
 
-    supabase.from('orders').update({ status: newStatus }).eq('id', orderId).then();
+    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (error) {
+      console.error('Erro ao atualizar status do pedido:', error);
+      alert('Erro ao atualizar pedido no banco: ' + error.message);
+      throw error;
+    }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
   };
 
-  const addTransaction = (tx: Omit<FinancialTransaction, 'id'>) => {
+  const addTransaction = async (tx: Omit<FinancialTransaction, 'id'>) => {
     const newTx: FinancialTransaction = {
       ...tx,
       id: `tx-${Date.now()}`
     };
-    supabase.from('transactions').insert(newTx).then();
+    const { error } = await supabase.from('transactions').insert(newTx);
+    if (error) {
+      console.error('Erro ao adicionar transação:', error);
+      alert('Erro ao salvar transação no banco: ' + error.message);
+      throw error;
+    }
     setTransactions(prev => [newTx, ...prev]);
   };
 
@@ -506,48 +667,62 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     }
   };
 
-  const addCustomCategory = (categoryName: string) => {
+  const addCustomCategory = async (categoryName: string) => {
     const clean = categoryName.trim().toUpperCase();
     if (!clean || clean === 'OUTROS') return;
-    setCustomCategories(prev => {
-      if (prev.includes(clean)) return prev;
-      supabase.from('custom_categories').insert({ name: clean }).then();
-      return [...prev, clean];
-    });
+    if (customCategories.includes(clean)) return;
+
+    const { error } = await supabase.from('custom_categories').insert({ name: clean });
+    if (error) {
+      console.error('Erro ao adicionar categoria:', error);
+      alert('Erro ao salvar categoria no banco: ' + error.message);
+      throw error;
+    }
+    setCustomCategories(prev => [...prev, clean]);
   };
 
-  const updateCustomCategory = (oldName: string, newName: string) => {
+  const updateCustomCategory = async (oldName: string, newName: string) => {
     const cleanNew = newName.trim().toUpperCase();
     if (!cleanNew || cleanNew === 'OUTROS') return;
     
-    supabase.from('custom_categories').update({ name: cleanNew }).eq('name', oldName).then();
+    const { error } = await supabase.from('custom_categories').update({ name: cleanNew }).eq('name', oldName);
+    if (error) {
+      console.error('Erro ao atualizar categoria:', error);
+      alert('Erro ao atualizar categoria no banco: ' + error.message);
+      throw error;
+    }
     setCustomCategories(prev => prev.map(c => c === oldName ? cleanNew : c));
     
     // Update products that use this category
-    supabase.from('products').update({ category: cleanNew }).eq('category', oldName).then();
+    await supabase.from('products').update({ category: cleanNew }).eq('category', oldName);
     setProducts(prev => prev.map(p => 
       p.category === oldName ? { ...p, category: cleanNew } : p
     ));
 
     // Update ingredients that use this category
-    supabase.from('ingredients').update({ category: cleanNew }).eq('category', oldName).then();
+    await supabase.from('ingredients').update({ category: cleanNew }).eq('category', oldName);
     setIngredients(prev => prev.map(i => 
       i.category === oldName ? { ...i, category: cleanNew } : i
     ));
   };
 
-  const deleteCustomCategory = (name: string) => {
-    supabase.from('custom_categories').delete().eq('name', name).then();
+  const deleteCustomCategory = async (name: string) => {
+    const { error } = await supabase.from('custom_categories').delete().eq('name', name);
+    if (error) {
+      console.error('Erro ao deletar categoria:', error);
+      alert('Erro ao excluir categoria no banco: ' + error.message);
+      throw error;
+    }
     setCustomCategories(prev => prev.filter(c => c !== name));
     
     // Optionally move products back to GERAL
-    supabase.from('products').update({ category: 'GERAL' }).eq('category', name).then();
+    await supabase.from('products').update({ category: 'GERAL' }).eq('category', name);
     setProducts(prev => prev.map(p => 
       p.category === name ? { ...p, category: 'GERAL' } : p
     ));
 
     // Update ingredients back to GERAL
-    supabase.from('ingredients').update({ category: 'GERAL' }).eq('category', name).then();
+    await supabase.from('ingredients').update({ category: 'GERAL' }).eq('category', name);
     setIngredients(prev => prev.map(i => 
       i.category === name ? { ...i, category: 'GERAL' } : i
     ));
@@ -566,7 +741,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setShifts([]);
   };
 
-  const openShift = (initialCash: number, openedBy: string) => {
+  const openShift = async (initialCash: number, openedBy: string) => {
     const newShift: Shift = {
       id: `shift-${Date.now()}`,
       openedAt: new Date().toISOString(),
@@ -574,11 +749,16 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       initialCash,
       status: 'OPEN'
     };
-    supabase.from('shifts').insert(newShift).then();
+    const { error } = await supabase.from('shifts').insert(newShift);
+    if (error) {
+      console.error('Erro ao abrir turno:', error);
+      alert('Erro ao abrir turno no banco: ' + error.message);
+      throw error;
+    }
     setCurrentShift(newShift);
   };
 
-  const closeShift = (actualCash: number, actualCard: number, closedBy: string, notes?: string) => {
+  const closeShift = async (actualCash: number, actualCard: number, closedBy: string, notes?: string) => {
     if (!currentShift) return;
     
     // Calcula o valor esperado no caixa.
@@ -601,17 +781,36 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       status: 'CLOSED',
       notes
     };
-    supabase.from('shifts').update(closedShift).eq('id', currentShift.id).then();
+    const { error } = await supabase.from('shifts').update(closedShift).eq('id', currentShift.id);
+    if (error) {
+      console.error('Erro ao fechar turno:', error);
+      alert('Erro ao fechar turno no banco: ' + error.message);
+      throw error;
+    }
     setCurrentShift(null); // O turno atual deixa de existir e vira "fechado"
     setShifts(prev => [closedShift, ...prev]);
   };
 
-  const cancelShift = (shiftId?: string) => {
+  const cancelShift = async (shiftId?: string) => {
     if (!shiftId || (currentShift && currentShift.id === shiftId)) {
-      if (currentShift) supabase.from('shifts').delete().eq('id', currentShift.id).then();
+      if (currentShift) {
+        const { error } = await supabase.from('shifts').delete().eq('id', currentShift.id);
+        if (error) {
+          console.error('Erro ao cancelar turno atual:', error);
+          alert('Erro ao excluir turno atual do banco: ' + error.message);
+          throw error;
+        }
+      }
       setCurrentShift(null);
     } else {
-      if (shiftId) supabase.from('shifts').delete().eq('id', shiftId).then();
+      if (shiftId) {
+        const { error } = await supabase.from('shifts').delete().eq('id', shiftId);
+        if (error) {
+          console.error('Erro ao cancelar turno:', error);
+          alert('Erro ao excluir turno do banco: ' + error.message);
+          throw error;
+        }
+      }
       setShifts(prev => prev.filter(s => s.id !== shiftId));
     }
   };

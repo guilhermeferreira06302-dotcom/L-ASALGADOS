@@ -15,14 +15,20 @@ import { Menu, Lock } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { currentUser, currentShift } = useApp();
-  const [activePortalOverride, setActivePortalOverride] = useState<'ADMIN' | 'FUNCIONARIO' | null>(null);
+  const [activePortalOverride, setActivePortalOverride] = useState<'ADMIN' | 'FUNCIONARIO' | null>(() => {
+    return (sessionStorage.getItem('sabor_gestao_activePortal') as any) || null;
+  });
   const activePortal = activePortalOverride || (currentUser?.role === 'ADMIN' ? 'ADMIN' : 'FUNCIONARIO');
 
   const setActivePortal = (portal: 'ADMIN' | 'FUNCIONARIO') => {
     setActivePortalOverride(portal);
   };
-  const [adminTab, setAdminTab] = useState<string>('DASHBOARD');
-  const [employeeTab, setEmployeeTab] = useState<'SHIFT' | 'OPERACAO'>('SHIFT');
+  const [adminTab, setAdminTab] = useState<string>(() => {
+    return sessionStorage.getItem('sabor_gestao_adminTab') || 'DASHBOARD';
+  });
+  const [employeeTab, setEmployeeTab] = useState<'SHIFT' | 'OPERACAO'>(() => {
+    return (sessionStorage.getItem('sabor_gestao_employeeTab') as any) || 'SHIFT';
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
@@ -38,7 +44,20 @@ const MainContent: React.FC = () => {
   // Reset portal override when user logs in or switches
   React.useEffect(() => {
     setActivePortalOverride(null);
+    sessionStorage.removeItem('sabor_gestao_activePortal');
   }, [currentUser?.id, currentUser?.role]);
+
+  React.useEffect(() => {
+    if (activePortalOverride) sessionStorage.setItem('sabor_gestao_activePortal', activePortalOverride);
+  }, [activePortalOverride]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sabor_gestao_adminTab', adminTab);
+  }, [adminTab]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sabor_gestao_employeeTab', employeeTab);
+  }, [employeeTab]);
 
   if (!currentUser) {
     return <LoginScreen />;
