@@ -11,7 +11,7 @@ import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { ShiftManagement } from './components/admin/ShiftManagement';
 import { AccessManagement } from './components/admin/AccessManagement';
 import { EmployeePortal } from './components/employee/EmployeePortal';
-import { Menu, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { currentUser, currentShift } = useApp();
@@ -105,19 +105,8 @@ const MainContent: React.FC = () => {
         {!(activePortal === 'FUNCIONARIO' && employeeAction !== null) && (
           <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-md">
             <div className="flex items-center gap-3 sm:gap-4">
-            <button 
-              onClick={() => setIsMobileOpen(true)}
-              className="p-2.5 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-800 transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center group"
-              title="Abrir Painel Administrativo"
-              aria-label="Abrir Painel Administrativo"
-            >
-              <Menu className="w-6 h-6 transition-transform group-hover:scale-110" />
-            </button>
-
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-slate-950 shadow-md text-lg flex-shrink-0">
-                🍔
-              </div>
+
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                   <span>L&A SALGADOS</span>
