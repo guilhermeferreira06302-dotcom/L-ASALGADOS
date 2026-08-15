@@ -67,12 +67,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const savedUser = sessionStorage.getItem('sabor_gestao_currentUser');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>(INITIAL_TRANSACTIONS);
-  const [audits, setAudits] = useState<InventoryAudit[]>(INITIAL_AUDITS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [audits, setAudits] = useState<InventoryAudit[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
