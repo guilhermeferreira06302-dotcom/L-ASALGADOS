@@ -1,0 +1,49 @@
+DO $$ 
+BEGIN
+  -- products
+  BEGIN ALTER TABLE products RENAME COLUMN cost_price TO "costPrice"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE products RENAME COLUMN prep_time_min TO "prepTimeMin"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE products RENAME COLUMN sales_count_monthly TO "salesCountMonthly"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE products RENAME COLUMN min_stock TO "minStock"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE products RENAME COLUMN max_stock TO "maxStock"; EXCEPTION WHEN OTHERS THEN END;
+  
+  -- ingredients
+  BEGIN ALTER TABLE ingredients RENAME COLUMN current_stock TO "currentStock"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE ingredients RENAME COLUMN min_stock TO "minStock"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE ingredients RENAME COLUMN max_stock TO "maxStock"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE ingredients RENAME COLUMN cost_per_unit TO "costPerUnit"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE ingredients RENAME COLUMN has_received_entry TO "hasReceivedEntry"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE ingredients RENAME COLUMN last_updated TO "lastUpdated"; EXCEPTION WHEN OTHERS THEN END;
+
+  -- orders
+  BEGIN ALTER TABLE orders RENAME COLUMN order_number TO "orderNumber"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN payment_method TO "paymentMethod"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN customer_name TO "customerName"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN order_type TO "orderType"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN table_number TO "tableNumber"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN created_at TO "createdAt"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE orders RENAME COLUMN cashier_name TO "cashierName"; EXCEPTION WHEN OTHERS THEN END;
+
+  -- transactions
+  BEGIN ALTER TABLE transactions RENAME COLUMN related_order_id TO "relatedOrderId"; EXCEPTION WHEN OTHERS THEN END;
+
+  -- stock_movements
+  BEGIN ALTER TABLE stock_movements RENAME COLUMN ingredient_id TO "ingredientId"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE stock_movements RENAME COLUMN ingredient_name TO "ingredientName"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE stock_movements RENAME COLUMN payment_method TO "paymentMethod"; EXCEPTION WHEN OTHERS THEN END;
+
+  -- inventory_audits
+  BEGIN ALTER TABLE inventory_audits RENAME COLUMN auditor_name TO "auditorName"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE inventory_audits RENAME COLUMN items_audited TO "itemsAudited"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE inventory_audits RENAME COLUMN discrepancies_count TO "discrepanciesCount"; EXCEPTION WHEN OTHERS THEN END;
+
+  -- shifts
+  BEGIN ALTER TABLE shifts RENAME COLUMN opened_at TO "openedAt"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN closed_at TO "closedAt"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN opened_by TO "openedBy"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN closed_by TO "closedBy"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN initial_cash TO "initialCash"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN final_cash_expected TO "finalCashExpected"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN final_cash_actual TO "finalCashActual"; EXCEPTION WHEN OTHERS THEN END;
+  BEGIN ALTER TABLE shifts RENAME COLUMN final_card_actual TO "finalCardActual"; EXCEPTION WHEN OTHERS THEN END;
+END $$;

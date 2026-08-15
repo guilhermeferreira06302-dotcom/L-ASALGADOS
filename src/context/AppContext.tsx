@@ -271,7 +271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             category: prod.category,
             costPerUnit: targetValue,
             supplier: 'Cadastrado via Produtos',
-            lastUpdated: 'Sem entrada',
+            lastUpdated: new Date().toISOString(),
             hasReceivedEntry: false,
             operator: currentUser?.name || 'Carlos Mendes'
           });
@@ -400,7 +400,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...ingData,
       unit: 'un',
       id: `ing-${Date.now()}`,
-      lastUpdated: 'Agora mesmo'
+      lastUpdated: new Date().toISOString()
     };
     const { error } = await supabase.from('ingredients').insert(newIng);
     if (error) {
@@ -412,7 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateIngredient = async (updated: Ingredient) => {
-    const toUpdate = { ...updated, unit: 'un', lastUpdated: 'Agora mesmo', hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
+    const toUpdate = { ...updated, unit: 'un', lastUpdated: new Date().toISOString(), hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
     const { error } = await supabase.from('ingredients').update(toUpdate).eq('id', toUpdate.id);
     if (error) {
       console.error('Erro ao atualizar insumo:', error);
@@ -431,7 +431,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedIng = {
       ...targetIng,
       currentStock: newStock,
-      lastUpdated: 'Agora mesmo',
+      lastUpdated: new Date().toISOString(),
       hasReceivedEntry: quantityChange > 0 ? true : (targetIng.hasReceivedEntry ?? (targetIng.currentStock > 0)),
       ...(operatorName ? { operator: operatorName } : {})
     };
@@ -518,7 +518,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updatedIng = {
           ...ing,
           currentStock: adj.actualStock,
-          lastUpdated: `Auditado por ${auditorName}`
+          lastUpdated: new Date().toISOString(),
+          operator: auditorName
         };
         const { error } = await supabase.from('ingredients').upsert(updatedIng);
         if (error) {

@@ -66,7 +66,6 @@ export const StockInventory: React.FC = () => {
 
   const formatLastUpdatedDisplay = (lastUpdated?: string): string => {
     if (!lastUpdated) return '';
-    const now = new Date();
     
     const formatDDMM = (d: Date) => {
       const day = String(d.getDate()).padStart(2, '0');
@@ -74,34 +73,36 @@ export const StockInventory: React.FC = () => {
       return `${day}/${month}`;
     };
 
+    // Tentar processar como Data ISO
+    const dateObj = new Date(lastUpdated);
+    if (!isNaN(dateObj.getTime())) {
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const mins = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${formatDDMM(dateObj)} - ${hours}:${mins}`;
+    }
+
     const lower = lastUpdated.toLowerCase();
     
     if (lower.includes('hoje')) {
       const timeMatch = lastUpdated.match(/(\d{2}:\d{2})/);
       const time = timeMatch ? timeMatch[1] : '00:00';
-      return `${formatDDMM(now)} - ${time}`;
+      return `${formatDDMM(new Date())} - ${time}`;
     }
     
     if (lower.includes('ontem')) {
-      const yesterday = new Date(now.getTime() - 86400000);
+      const yesterday = new Date(Date.now() - 86400000);
       const timeMatch = lastUpdated.match(/(\d{2}:\d{2})/);
       const time = timeMatch ? timeMatch[1] : '00:00';
       return `${formatDDMM(yesterday)} - ${time}`;
     }
     
-    if (lower.includes('agora')) {
+    if (lower.includes('agora') || lower.includes('auditado') || lower.includes('sem entrada')) {
+      const now = new Date();
       const hours = String(now.getHours()).padStart(2, '0');
       const mins = String(now.getMinutes()).padStart(2, '0');
       return `${formatDDMM(now)} - ${hours}:${mins}`;
     }
 
-    if (lower.includes('auditado')) {
-      const hours = String(now.getHours()).padStart(2, '0');
-      const mins = String(now.getMinutes()).padStart(2, '0');
-      return `${formatDDMM(now)} - ${hours}:${mins}`;
-    }
-
-    // Se já estiver em algum outro formato (ex: 02/07 - 07:30)
     return lastUpdated;
   };
 
