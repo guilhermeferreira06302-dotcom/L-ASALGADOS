@@ -114,7 +114,12 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
         if (qtyNum <= 0) continue;
         const targetIng = ingredients.find(i => i.id === item.selectedMatId);
         if (targetIng && qtyNum > targetIng.currentStock) {
-          alert(`Estoque divergente!\nNão é possível retirar ${qtyNum} ${targetIng.unit} de "${targetIng.name}".\nO estoque atual é de apenas ${targetIng.currentStock} ${targetIng.unit}.`);
+          const isAdmin = currentUser?.role === 'ADMIN';
+          const stockInfo = isAdmin 
+            ? `O estoque atual é de apenas ${targetIng.currentStock} ${targetIng.unit}.` 
+            : `A quantidade em estoque é insuficiente para esta saída.`;
+            
+          alert(`Estoque divergente!\nNão é possível retirar ${qtyNum} ${targetIng.unit} de "${targetIng.name}".\n${stockInfo}`);
           return;
         }
       }
