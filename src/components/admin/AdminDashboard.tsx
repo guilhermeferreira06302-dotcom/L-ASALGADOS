@@ -124,8 +124,10 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
     if (d.pedidos > maxPedidos) maxPedidos = d.pedidos;
   });
   
-  const peakEntry = hourlyRushData.find(d => d.pedidos === maxPedidos);
-  const peakText = peakEntry && maxPedidos > 0 ? peakEntry.hour : 'N/A';
+  const peakEntries = hourlyRushData.filter(d => d.pedidos === maxPedidos);
+  const peakText = peakEntries.length > 0 && maxPedidos > 0 
+    ? `${peakEntries.map(e => e.hour).join(', ')} (${maxPedidos} pedidos/h)` 
+    : 'N/A';
   const weeklySalesCount: Record<string, number> = {};
   
   stockMovements.forEach(movement => {

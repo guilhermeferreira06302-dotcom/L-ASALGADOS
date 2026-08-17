@@ -41,6 +41,8 @@ interface AppContextType {
   // Financial actions
   addTransaction: (tx: Omit<FinancialTransaction, 'id'>) => void;
   settlePendingDebt: (movementId: string) => Promise<void>;
+  convertDebtToLoss: (movementId: string) => Promise<void>;
+  convertLoss: (movementId: string, target: 'PENDENTE' | 'FATURAMENTO') => Promise<void>;
   // Custom categories
   customCategories: string[];
   addCustomCategory: (categoryName: string) => void;
@@ -637,6 +639,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStockMovements(prev => prev.map(m => m.id === movementId ? { ...m, paymentMethod: 'Dinheiro' } : m));
   };
 
+  const convertDebtToLoss = async (movementId: string) => {
+    const targetMov = stockMovements.find(m => m.id === movementId);
+    if (!targetMov) return;
+
+    const { error } = await supabase
+      .from('stock_movements')
+      .update({ paymentMethod: 'Prejuízo', reason: 'Prejuízo' })
+      .eq('id', movementId);
+
+    if (error) {
+      console.error('Erro ao converter dívida para prejuízo:', error);
+      alert('Erro ao atualizar banco de dados: ' + error.message);
+      throw error;
+    }
+  };
+
+  const convertLoss = async (movementId: string, target: 'PENDENTE' | 'FATURAMENTO') => {
+    const targetMov = stockMovements.find(m => m.id === movementId);
+    if (!targetMov) return;
+
+    const paymentMethod = target === 'PENDENTE' ? 'Pegou Fiado' : 'Dinheiro';
+    const reason = 'Venda';
+
+    const { error } = await supabase
+      .from('stock_movements')
+      .update({ paymentMethod, reason })
+      .eq('id', movementId);
+
+    if (error) {
+      console.error('Erro ao converter prejuízo:', error);
+      alert('Erro ao atualizar banco de dados: ' + error.message);
+      throw error;
+    }
+  };
+
   const generateAIAdvice = async (promptType: 'ESTOQUE' | 'FINANCEIRO' | 'VENDAS' | 'GERAL', customQuestion?: string): Promise<string> => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     
@@ -865,6 +902,8 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         updateOrderStatus,
         addTransaction,
         settlePendingDebt,
+        convertDebtToLoss,
+        convertLoss,
         addCustomCategory,
         updateCustomCategory,
         deleteCustomCategory,
