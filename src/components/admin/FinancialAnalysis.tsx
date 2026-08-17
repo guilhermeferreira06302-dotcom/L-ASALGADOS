@@ -695,7 +695,7 @@ export const FinancialAnalysis: React.FC = () => {
       {/* Modal Quitar Dívidas Pendentes */}
       {showPendingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-orange-500" />
