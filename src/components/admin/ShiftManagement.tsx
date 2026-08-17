@@ -15,6 +15,7 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
   const [cardCashStr, setCardCashStr] = useState('');
   const [notes, setNotes] = useState('');
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleOpen = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +50,18 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
 
   const renderHistory = () => {
     if (currentUser?.role !== 'ADMIN') return null;
+
+    const allShiftsDates = [...shifts.map(s => s.openedAt.split('T')[0])];
+    if (currentShift) {
+      allShiftsDates.push(currentShift.openedAt.split('T')[0]);
+    }
+    const uniqueDates = Array.from(new Set(allShiftsDates)).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    const safePage = currentPage > uniqueDates.length && uniqueDates.length > 0 ? 1 : Math.max(1, currentPage);
+    const currentDate = uniqueDates.length > 0 ? uniqueDates[safePage - 1] : '';
+    const paginatedShifts = shifts.filter(s => currentDate && s.openedAt.split('T')[0] === currentDate);
+    const showCurrentShift = currentShift && currentDate && currentShift.openedAt.split('T')[0] === currentDate;
+
     return (
         <div className={`w-full max-w-full bg-white p-6 rounded-3xl border border-slate-200 shadow-xl ${!isAdminView ? 'mt-12' : ''}`}>
           <div className="flex items-center gap-2 mb-6">
@@ -73,16 +86,16 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
-                {shifts.length === 0 && !currentShift ? (
+                {paginatedShifts.length === 0 && !showCurrentShift ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500 text-xs">
+                    <td colSpan={10} className="py-8 text-center text-slate-500 text-xs">
                       Nenhum turno registrado.
                     </td>
                   </tr>
                 ) : null}
                 
-                {/* Mostra o turno atual primeiro, se existir */}
-                {currentShift && (
+                {/* Mostra o turno atual primeiro, se existir e pertencer a esta página */}
+                {showCurrentShift && currentShift && (
                   <tr className="bg-emerald-50/50">
                     <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
                       <UserIcon className="w-4 h-4 text-slate-400" />
@@ -126,7 +139,7 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                   </tr>
                 )}
 
-                {shifts.map(shift => (
+                {paginatedShifts.map(shift => (
                   <tr key={shift.id} className="hover:bg-slate-50 transition">
                     <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
                       <UserIcon className="w-4 h-4 text-slate-400" />
@@ -172,6 +185,31 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {uniqueDates.length > 0 && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <span className="text-xs text-slate-500">
+                Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {uniqueDates.map((dateStr, idx) => (
+                  <button
+                    key={dateStr}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
+                      safePage === idx + 1
+                        ? 'bg-emerald-500 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                    title={dateStr.split('-').reverse().join('/')}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
     );
   };

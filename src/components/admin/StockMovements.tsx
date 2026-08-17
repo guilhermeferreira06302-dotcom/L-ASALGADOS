@@ -22,6 +22,7 @@ export const StockMovements: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -73,6 +74,16 @@ export const StockMovements: React.FC = () => {
 
     return true;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Date-based Pagination Logic
+  const uniqueDates = Array.from(new Set(filteredMovements.map(m => m.date.split('T')[0]))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  
+  if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
+    setCurrentPage(1);
+  }
+
+  const currentDate = uniqueDates[currentPage - 1];
+  const paginatedMovements = filteredMovements.filter(m => m.date.split('T')[0] === currentDate);
 
   const formatDateTime = (isoString: string) => {
     const d = new Date(isoString);
@@ -373,14 +384,14 @@ export const StockMovements: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
-              {filteredMovements.length === 0 ? (
+              {paginatedMovements.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-500 text-sm">
                     Nenhuma movimentação encontrada para os filtros aplicados.
                   </td>
                 </tr>
               ) : (
-                filteredMovements.map(mov => (
+                paginatedMovements.map(mov => (
                   <tr key={mov.id} className="hover:bg-slate-50/50 transition">
                     <td className="py-3.5 px-5 text-xs text-slate-600 font-medium whitespace-nowrap">
                       {formatDateTime(mov.date)}
@@ -451,6 +462,31 @@ export const StockMovements: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {uniqueDates.length > 0 && (
+          <div className="flex items-center justify-between mt-4 mb-4 px-6">
+            <span className="text-xs text-slate-500">
+              Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {uniqueDates.map((dateStr, idx) => (
+                <button
+                  key={dateStr}
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
+                    currentPage === idx + 1
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                  title={dateStr.split('-').reverse().join('/')}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal to View Photo */}

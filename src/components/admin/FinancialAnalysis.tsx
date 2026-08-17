@@ -33,6 +33,7 @@ export const FinancialAnalysis: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showLossModal, setShowLossModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -164,6 +165,17 @@ export const FinancialAnalysis: React.FC = () => {
       return true;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Date-based Pagination Logic
+  const uniqueDates = Array.from(new Set(allDisplayTransactions.map(t => t.date.split('T')[0]))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  
+  // Se o total de dias mudar após um filtro, garantir que a página não fique fora do limite
+  if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
+    setCurrentPage(1);
+  }
+
+  const currentDate = uniqueDates[currentPage - 1];
+  const paginatedTransactions = allDisplayTransactions.filter(t => t.date.split('T')[0] === currentDate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -503,14 +515,14 @@ export const FinancialAnalysis: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-800">
-              {allDisplayTransactions.length === 0 ? (
+              {paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-slate-700 text-xs">
                     Nenhum lançamento encontrado com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
-                allDisplayTransactions.map(tx => (
+                paginatedTransactions.map(tx => (
                   <tr key={tx.id} className="hover:bg-slate-100/40 transition">
                     <td className="py-3.5 px-5 text-xs text-slate-700 flex items-center gap-1.5 whitespace-nowrap">
                       <Calendar className="w-3.5 h-3.5" />
@@ -557,6 +569,31 @@ export const FinancialAnalysis: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {uniqueDates.length > 0 && (
+          <div className="flex items-center justify-between mt-4 px-2">
+            <span className="text-xs text-slate-500">
+              Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {uniqueDates.map((dateStr, idx) => (
+                <button
+                  key={dateStr}
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
+                    currentPage === idx + 1
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                  title={dateStr.split('-').reverse().join('/')}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal Nova Despesa */}
