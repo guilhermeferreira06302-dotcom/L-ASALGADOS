@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   ArrowDownRight, ArrowUpRight, Search, Calendar, Filter, History, User,
-  X, ChevronDown, FileText, Camera, CreditCard
+  X, ChevronDown, FileText, Camera, CreditCard, Edit2, Save, Trash2
 } from 'lucide-react';
-import { StockMovementType } from '../../types';
+import { StockMovement, StockMovementType } from '../../types';
 
 export const StockMovements: React.FC = () => {
-  const { stockMovements, ingredients, products } = useApp();
+  const { stockMovements, ingredients, products, editStockMovement, deleteStockMovement } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | StockMovementType>('ALL');
   const [filterOperator, setFilterOperator] = useState('ALL');
@@ -22,6 +22,7 @@ export const StockMovements: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const formatDateDisplay = (dateStr: string) => {
@@ -381,6 +382,7 @@ export const StockMovements: React.FC = () => {
                 <th className="py-3.5 px-5">Observação</th>
                 <th className="py-3.5 px-5">Forma de Pagamento</th>
                 <th className="py-3.5 px-5">Operador</th>
+                <th className="py-3.5 px-5 text-center">Editar</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -456,6 +458,15 @@ export const StockMovements: React.FC = () => {
                         <span>{mov.operator}</span>
                       </div>
                     </td>
+                    <td className="py-3.5 px-5 text-center">
+                      <button
+                        onClick={() => setEditingMovement(mov)}
+                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
+                        title="Editar movimentação"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -505,6 +516,183 @@ export const StockMovements: React.FC = () => {
             </div>
             <div className="p-4 text-center">
               <p className="text-sm font-bold text-slate-700">Evidência Fotográfica do Prejuízo</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Movimentação */}
+      {editingMovement && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-blue-500" />
+                <span>Editar Movimentação</span>
+              </h3>
+              <button onClick={() => setEditingMovement(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 transition">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-2 flex-1 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Tipo da Movimentação</label>
+                  <select
+                    value={editingMovement.type}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, type: e.target.value as 'ENTRADA' | 'SAIDA' })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  >
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Data</label>
+                  <input
+                    type="datetime-local"
+                    value={editingMovement.date.slice(0, 16)}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, date: new Date(e.target.value).toISOString() })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Produto / Insumo</label>
+                  <select
+                    value={editingMovement.ingredientId}
+                    onChange={(e) => {
+                       const val = e.target.value;
+                       const ing = ingredients.find(i => i.id === val);
+                       setEditingMovement({ ...editingMovement, ingredientId: val, ingredientName: ing?.name || '', unit: ing?.unit || 'un' });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  >
+                    <optgroup label="Insumos">
+                      {ingredients.filter(i => !i.id.startsWith('ing-prod-')).map(i => (
+                        <option key={i.id} value={i.id}>{i.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Produtos Finais">
+                      {ingredients.filter(i => i.id.startsWith('ing-prod-')).map(i => (
+                        <option key={i.id} value={i.id}>{i.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Quantidade</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingMovement.quantity}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, quantity: Number(e.target.value) })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Motivo / Categoria</label>
+                  <select
+                    value={editingMovement.reason}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, reason: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  >
+                    <option value="Ajuste manual">Ajuste manual</option>
+                    <option value="Compra">Compra</option>
+                    <option value="Prejuízo">Prejuízo</option>
+                    <option value="Venda">Venda</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Forma de Pagamento</label>
+                  <select
+                    value={editingMovement.paymentMethod || ''}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, paymentMethod: e.target.value || undefined })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  >
+                    <option value="">Nenhuma / Não se aplica</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="PIX">PIX</option>
+                    <option value="Cartão">Cartão</option>
+                    <option value="Pegou Fiado">Fiado</option>
+                    <option value="Prejuízo">Prejuízo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Operador</label>
+                  <input
+                    type="text"
+                    value={editingMovement.operator}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, operator: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Observação</label>
+                  <input
+                    type="text"
+                    value={editingMovement.observation || ''}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, observation: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Tem certeza que deseja EXCLUIR esta movimentação? Esta ação não pode ser desfeita e afetará o saldo de estoque.')) {
+                    try {
+                      await deleteStockMovement(editingMovement.id);
+                      setEditingMovement(null);
+                      alert('Movimentação excluída com sucesso!');
+                    } catch (err: any) {
+                      alert('Erro ao excluir: ' + err.message);
+                    }
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-xl font-bold transition cursor-pointer"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span>Excluir</span>
+              </button>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingMovement(null)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer hover:bg-slate-200 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await editStockMovement(editingMovement.id, editingMovement);
+                      setEditingMovement(null);
+                    } catch (err: any) {
+                      alert("Erro ao editar: " + err.message);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition cursor-pointer shadow-md shadow-blue-500/20"
+                >
+                  <Save className="w-5 h-5" />
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

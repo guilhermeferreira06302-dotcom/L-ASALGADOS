@@ -34,6 +34,8 @@ interface AppContextType {
   addIngredient: (ing: Omit<Ingredient, 'id' | 'lastUpdated'>) => void;
   updateIngredient: (ing: Ingredient) => void;
   adjustStock: (ingredientId: string, quantityChange: number, reason?: string, operatorName?: string, observation?: string, photo?: string, paymentMethod?: string) => void;
+  editStockMovement: (movementId: string, updatedData: Partial<StockMovement>) => Promise<void>;
+  deleteStockMovement: (movementId: string) => Promise<void>;
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
   // Order actions
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Order;
@@ -494,20 +496,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const originalProdId = updatedIng.id.replace('ing-prod-', '');
         const originalProd = products.find(p => p.id === originalProdId);
         if (originalProd) {
-          // Using price (valor do produto cadastrado) as requested, or costPrice if more appropriate. 
-          // The user said "valor do produto cadastrado", which usually implies the sale price.
           unitValue = originalProd.price > 0 ? originalProd.price : (originalProd.costPrice || 0);
         }
       }
-
+      
       await addTransaction({
         date: new Date().toISOString().split('T')[0],
         type: 'SAIDA',
         category: 'PREJUIZO',
         amount: Math.abs(quantityChange) * unitValue,
-        description: `Prejuízo de Estoque: ${updatedIng.name} (${Math.abs(quantityChange)} ${updatedIng.unit})`
+        description: `Prejuízo Registrado: ${updatedIng.name} (${Math.abs(quantityChange)} ${updatedIng.unit})`
       });
     }
+  };
+
+  const editStockMovement = async (movementId: string, updatedData: Partial<StockMovement>) => {
+    const oldMovement = stockMovements.find(m => m.id === movementId);
+    if (!oldMovement) throw new Error('Movimentação não encontrada');
+
+    const updatedMovement = { ...oldMovement, ...updatedData };
+    
+    // Check if ingredient, type, or quantity changed
+    const quantityChanged = oldMovement.quantity !== updatedMovement.quantity;
+    const typeChanged = oldMovement.type !== updatedMovement.type;
+    const ingredientChanged = oldMovement.ingredientId !== updatedMovement.ingredientId;
+
+    if (quantityChanged || typeChanged || ingredientChanged) {
+      // 1. Revert old movement from old ingredient
+      const oldIng = ingredients.find(i => i.id === oldMovement.ingredientId);
+      let baseStockForTarget = 0;
+      
+      if (oldIng) {
+        const revertQty = oldMovement.type === 'ENTRADA' ? -oldMovement.quantity : oldMovement.quantity;
+        const newOldStock = Math.max(0, oldIng.currentStock + revertQty);
+        
+        // If the ingredient changed, update state and DB for old ingredient
+        if (ingredientChanged) {
+          const { error: errOld } = await supabase.from('ingredients').update({ currentStock: newOldStock }).eq('id', oldIng.id);
+          if (errOld) throw errOld;
+          setIngredients(prev => prev.map(i => i.id === oldIng.id ? { ...i, currentStock: newOldStock } : i));
+        } else {
+          // If ingredient didn't change, we use newOldStock as base for the apply step
+          baseStockForTarget = newOldStock;
+        }
+      }
+
+      // 2. Apply new movement to new ingredient
+      const targetIngId = updatedMovement.ingredientId;
+      const targetIng = ingredients.find(i => i.id === targetIngId) || oldIng;
+      if (targetIng) {
+        const applyQty = updatedMovement.type === 'ENTRADA' ? updatedMovement.quantity : -updatedMovement.quantity;
+        let baseStock = targetIng.currentStock;
+        if (!ingredientChanged && oldIng) {
+          baseStock = baseStockForTarget;
+        }
+        const finalStock = Math.max(0, baseStock + applyQty);
+        
+        const { error: errTarget } = await supabase.from('ingredients').update({ currentStock: finalStock }).eq('id', targetIngId);
+        if (errTarget) throw errTarget;
+        setIngredients(prev => prev.map(i => i.id === targetIngId ? { ...i, currentStock: finalStock } : i));
+      }
+    }
+
+    // Update movement in database
+    const { error } = await supabase.from('stock_movements').update(updatedMovement).eq('id', movementId);
+    if (error) throw error;
+
+    setStockMovements(prev => prev.map(m => m.id === movementId ? updatedMovement : m));
+  };
+
+  const deleteStockMovement = async (movementId: string) => {
+    const targetMov = stockMovements.find(m => m.id === movementId);
+    if (!targetMov) throw new Error('Movimentação não encontrada');
+
+    // 1. Revert stock
+    const targetIng = ingredients.find(i => i.id === targetMov.ingredientId);
+    if (targetIng) {
+      const revertQty = targetMov.type === 'ENTRADA' ? -targetMov.quantity : targetMov.quantity;
+      const finalStock = Math.max(0, targetIng.currentStock + revertQty);
+      
+      const { error: errTarget } = await supabase.from('ingredients').update({ currentStock: finalStock }).eq('id', targetIng.id);
+      if (errTarget) throw errTarget;
+      setIngredients(prev => prev.map(i => i.id === targetIng.id ? { ...i, currentStock: finalStock } : i));
+    }
+
+    // 2. Delete movement from DB
+    const { error } = await supabase.from('stock_movements').delete().eq('id', movementId);
+    if (error) throw error;
+
+    setStockMovements(prev => prev.filter(m => m.id !== movementId));
   };
 
   const performInventoryAudit = async (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => {
@@ -897,6 +974,8 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         addIngredient,
         updateIngredient,
         adjustStock,
+        editStockMovement,
+        deleteStockMovement,
         performInventoryAudit,
         createOrder,
         updateOrderStatus,
