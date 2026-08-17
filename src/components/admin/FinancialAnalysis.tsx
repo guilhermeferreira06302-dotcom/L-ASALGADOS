@@ -719,6 +719,9 @@ export const FinancialAnalysis: React.FC = () => {
                       <div>
                         <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
                         <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                        {m.observation && (
+                          <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
                         <span className="font-extrabold text-orange-500">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -789,6 +792,9 @@ export const FinancialAnalysis: React.FC = () => {
                       <div>
                         <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
                         <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                        {m.observation && (
+                          <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
                         <span className="font-extrabold text-rose-500">Custo: R$ {cost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
