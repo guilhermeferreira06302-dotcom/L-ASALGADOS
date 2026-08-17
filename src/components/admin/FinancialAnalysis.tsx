@@ -569,32 +569,32 @@ export const FinancialAnalysis: React.FC = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination Controls */}
-        {uniqueDates.length > 0 && (
-          <div className="flex items-center justify-between mt-4 px-2">
-            <span className="text-xs text-slate-500">
-              Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {uniqueDates.map((dateStr, idx) => (
-                <button
-                  key={dateStr}
-                  onClick={() => setCurrentPage(idx + 1)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
-                    currentPage === idx + 1
-                      ? 'bg-emerald-500 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                  title={dateStr.split('-').reverse().join('/')}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Pagination Controls */}
+      {uniqueDates.length > 0 && (
+        <div className="flex flex-col items-center justify-center mt-6 gap-3">
+          <span className="text-sm text-slate-500">
+            Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
+          </span>
+          <div className="flex flex-wrap justify-center gap-2">
+            {uniqueDates.map((dateStr, idx) => (
+              <button
+                key={dateStr}
+                onClick={() => setCurrentPage(idx + 1)}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition cursor-pointer ${
+                  currentPage === idx + 1
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                }`}
+                title={dateStr.split('-').reverse().join('/')}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modal Nova Despesa */}
       {showModal && (
