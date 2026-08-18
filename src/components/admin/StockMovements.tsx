@@ -95,7 +95,35 @@ export const StockMovements: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      
+      {/* Resumo Dinâmico */}
+      <div className="flex justify-end">
+        <div className="flex gap-4">
+          <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border border-red-200 rounded-2xl shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+              <ArrowDownRight className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Qtd. Total Vendidas</p>
+              <p className="text-lg font-black text-red-700 leading-none mt-0.5">
+                {filteredMovements.filter(m => m.type === 'SAIDA').reduce((sum, m) => sum + m.quantity, 0).toFixed(2).replace('.00', '')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Qtd. Total Entradas no estoque</p>
+              <p className="text-lg font-black text-emerald-700 leading-none mt-0.5">
+                {filteredMovements.filter(m => m.type === 'ENTRADA').reduce((sum, m) => sum + m.quantity, 0).toFixed(2).replace('.00', '')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative flex-1">
@@ -364,33 +392,6 @@ export const StockMovements: React.FC = () => {
               </select>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Resumo Dinâmico */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-2">
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl shadow-sm flex-1 sm:flex-none min-w-[220px]">
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
-            <ArrowDownRight className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Qtd. Total Saídas</p>
-            <p className="text-xl font-black text-red-700 leading-none mt-1">
-              {filteredMovements.filter(m => m.type === 'SAIDA').reduce((sum, m) => sum + m.quantity, 0).toFixed(2).replace('.00', '')}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-sm flex-1 sm:flex-none min-w-[220px]">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-            <ArrowUpRight className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Qtd. Total Entradas</p>
-            <p className="text-xl font-black text-emerald-700 leading-none mt-1">
-              {filteredMovements.filter(m => m.type === 'ENTRADA').reduce((sum, m) => sum + m.quantity, 0).toFixed(2).replace('.00', '')}
-            </p>
-          </div>
         </div>
       </div>
 
