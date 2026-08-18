@@ -41,22 +41,22 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   // Financial KPIs (Monthly)
   const monthlyManualIn = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'ENTRADA').reduce((s, t) => s + t.amount, 0);
   const monthlyStockSales = stockMovements
-    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
+    .filter(m => m.date.toBRTDateString() >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Pegou Fiado' && m.paymentMethod !== 'Prejuízo')
     .reduce((sum, m) => sum + (getProductPrice(m.ingredientId) * m.quantity), 0);
   const monthlyInflow = monthlyManualIn + monthlyStockSales;
 
   const monthlyManualOut = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'SAIDA' && t.category !== 'PREJUIZO').reduce((s, t) => s + t.amount, 0);
   const monthlyStockCogs = stockMovements
-    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Prejuízo')
+    .filter(m => m.date.toBRTDateString() >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod !== 'Prejuízo')
     .reduce((sum, m) => sum + (getProductCost(m.ingredientId) * m.quantity), 0);
   
   const monthlyManualLoss = transactions.filter(t => t.date >= startOfMonthStr && t.type === 'SAIDA' && t.category === 'PREJUIZO').reduce((s, t) => s + t.amount, 0);
   const monthlyStockLoss = stockMovements
-    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && (m.reason === 'Prejuízo' || m.paymentMethod === 'Prejuízo'))
+    .filter(m => m.date.toBRTDateString() >= startOfMonthStr && m.type === 'SAIDA' && (m.reason === 'Prejuízo' || m.paymentMethod === 'Prejuízo'))
     .reduce((sum, m) => sum + (getProductCost(m.ingredientId) * m.quantity), 0);
 
   const monthlySaldoPendente = stockMovements
-    .filter(m => m.date.split('T')[0] >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
+    .filter(m => m.date.toBRTDateString() >= startOfMonthStr && m.type === 'SAIDA' && m.reason !== 'Prejuízo' && m.paymentMethod === 'Pegou Fiado')
     .reduce((sum, m) => sum + (getProductPrice(m.ingredientId) * m.quantity), 0);
 
   const monthlyNetProfit = monthlyInflow - (monthlyManualOut + monthlyStockCogs) - (monthlyManualLoss + monthlyStockLoss);
@@ -64,7 +64,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   const lowStockItems = ingredients.filter(i => isStockActive(i) && i.currentStock <= i.minStock);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysAgoFullISO = thirtyDaysAgo.toISOString();
+  const thirtyDaysAgoFullISO = thirtyDaysAgo.toBRTISOString();
 
   let monthlyProductOutflowQuantity = 0;
   let monthlyProductOutflowValue = 0;
@@ -93,7 +93,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoFullISO = sevenDaysAgo.toISOString();
+  const sevenDaysAgoFullISO = sevenDaysAgo.toBRTISOString();
 
   // Hourly rush data (7-day average, dynamic hours starting at 03:00)
   const hourlyCounts: Record<number, number> = {};

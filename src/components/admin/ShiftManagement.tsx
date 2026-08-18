@@ -51,16 +51,16 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
   const renderHistory = () => {
     if (currentUser?.role !== 'ADMIN') return null;
 
-    const allShiftsDates = [...shifts.map(s => s.openedAt.split('T')[0])];
+    const allShiftsDates = [...shifts.map(s => s.openedAt.toBRTDateString())];
     if (currentShift) {
-      allShiftsDates.push(currentShift.openedAt.split('T')[0]);
+      allShiftsDates.push(currentShift.openedAt.toBRTDateString());
     }
     const uniqueDates = Array.from(new Set(allShiftsDates)).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
     const safePage = currentPage > uniqueDates.length && uniqueDates.length > 0 ? 1 : Math.max(1, currentPage);
     const currentDate = uniqueDates.length > 0 ? uniqueDates[safePage - 1] : '';
-    const paginatedShifts = shifts.filter(s => currentDate && s.openedAt.split('T')[0] === currentDate);
-    const showCurrentShift = currentShift && currentDate && currentShift.openedAt.split('T')[0] === currentDate;
+    const paginatedShifts = shifts.filter(s => currentDate && s.openedAt.toBRTDateString() === currentDate);
+    const showCurrentShift = currentShift && currentDate && currentShift.openedAt.toBRTDateString() === currentDate;
 
     return (
       <>

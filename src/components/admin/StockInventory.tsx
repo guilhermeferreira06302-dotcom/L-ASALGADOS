@@ -17,9 +17,9 @@ export const StockInventory: React.FC = () => {
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'EXACT' | 'RANGE'>('ALL');
-  const [exactDate, setExactDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [exactDate, setExactDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
+  const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
 
   // Modal states
   const [showAuditWizard, setShowAuditWizard] = useState(false);
@@ -30,7 +30,7 @@ export const StockInventory: React.FC = () => {
 
   const getIngredientDateStr = (lastUpdated: string): string => {
     const today = new Date();
-    const toISO = (d: Date) => d.toISOString().split('T')[0];
+    const toISO = (d: Date) => d.toBRTISOString().toBRTDateString();
 
     if (!lastUpdated) return toISO(today);
     const lower = lastUpdated.toLowerCase();
@@ -59,7 +59,7 @@ export const StockInventory: React.FC = () => {
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const parts = dateStr.split('T')[0].split('-');
+    const parts = dateStr.toBRTDateString().split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
@@ -283,7 +283,7 @@ export const StockInventory: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-700 mb-1">Selecione o dia exato:</label>
                       <input
                         type="date"
-                        max={new Date().toISOString().split('T')[0]}
+                        max={new Date().toBRTISOString().toBRTDateString()}
                         value={exactDate}
                         onChange={(e) => setExactDate(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -299,7 +299,7 @@ export const StockInventory: React.FC = () => {
                         <label className="block text-xs font-bold text-slate-700 mb-1">Data Inicial:</label>
                         <input
                           type="date"
-                          max={endDate || new Date().toISOString().split('T')[0]}
+                          max={endDate || new Date().toBRTISOString().toBRTDateString()}
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -310,7 +310,7 @@ export const StockInventory: React.FC = () => {
                         <input
                           type="date"
                           min={startDate}
-                          max={new Date().toISOString().split('T')[0]}
+                          max={new Date().toBRTISOString().toBRTDateString()}
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -323,8 +323,8 @@ export const StockInventory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -333,8 +333,8 @@ export const StockInventory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 15 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 15 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -343,8 +343,8 @@ export const StockInventory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 30 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -353,8 +353,8 @@ export const StockInventory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 60 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 60 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -363,8 +363,8 @@ export const StockInventory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 90 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >

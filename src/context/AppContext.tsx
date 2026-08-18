@@ -276,7 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             category: prod.category,
             costPerUnit: targetValue,
             supplier: 'Cadastrado via Produtos',
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: new Date().toBRTISOString(),
             hasReceivedEntry: false,
             operator: currentUser?.name || 'Sistema'
           });
@@ -405,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...ingData,
       unit: 'un',
       id: `ing-${Date.now()}`,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toBRTISOString()
     };
     const { error } = await supabase.from('ingredients').insert(newIng);
     if (error) {
@@ -417,7 +417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateIngredient = async (updated: Ingredient) => {
-    const toUpdate = { ...updated, unit: 'un', lastUpdated: new Date().toISOString(), hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
+    const toUpdate = { ...updated, unit: 'un', lastUpdated: new Date().toBRTISOString(), hasReceivedEntry: updated.currentStock > 0 ? true : updated.hasReceivedEntry };
     const { error } = await supabase.from('ingredients').update(toUpdate).eq('id', toUpdate.id);
     if (error) {
       console.error('Erro ao atualizar insumo:', error);
@@ -436,7 +436,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedIng = {
       ...targetIng,
       currentStock: newStock,
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: new Date().toBRTISOString(),
       hasReceivedEntry: quantityChange > 0 ? true : (targetIng.hasReceivedEntry ?? (targetIng.currentStock > 0)),
       ...(operatorName ? { operator: operatorName } : {})
     };
@@ -463,7 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       observation: observation || 'Sem observação',
       paymentMethod,
       operator: operatorName || currentUser?.name || 'Sistema',
-      date: new Date().toISOString(),
+      date: new Date().toBRTISOString(),
       photo
     };
 
@@ -481,7 +481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // If cost related / restock, can also optionally add a transaction
     if (quantityChange > 0 && reason?.includes('Compra')) {
       await addTransaction({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toBRTISOString().toBRTDateString(),
         type: 'SAIDA',
         category: 'FORNECEDOR',
         amount: quantityChange * updatedIng.costPerUnit,
@@ -501,7 +501,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       await addTransaction({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toBRTISOString().toBRTDateString(),
         type: 'SAIDA',
         category: 'PREJUIZO',
         amount: Math.abs(quantityChange) * unitValue,
@@ -598,7 +598,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updatedIng = {
           ...ing,
           currentStock: adj.actualStock,
-          lastUpdated: new Date().toISOString(),
+          lastUpdated: new Date().toBRTISOString(),
           operator: auditorName
         };
         const { error } = await supabase.from('ingredients').upsert(updatedIng);
@@ -615,7 +615,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newAudit: InventoryAudit = {
       id: `aud-${Date.now()}`,
-      date: new Date().toISOString(),
+      date: new Date().toBRTISOString(),
       auditorName,
       itemsAudited: adjustments.length,
       discrepanciesCount: discrepancies,
@@ -637,7 +637,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ord-${Date.now()}`,
       orderNumber: highestNum + 1,
       status: 'EM_PREPARO',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toBRTISOString()
     };
     const { error } = await supabase.from('orders').insert(newOrder);
     if (error) {
@@ -649,7 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Add financial entry immediately or upon delivery
     await addTransaction({
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toBRTISOString().toBRTDateString(),
       type: 'ENTRADA',
       category: 'VENDAS',
       amount: newOrder.total,
@@ -878,7 +878,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
   const openShift = async (initialCash: number, openedBy: string) => {
     const newShift: Shift = {
       id: `shift-${Date.now()}`,
-      openedAt: new Date().toISOString(),
+      openedAt: new Date().toBRTISOString(),
       openedBy,
       initialCash,
       status: 'OPEN'
@@ -897,7 +897,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     
     // Calcula o valor esperado no caixa.
     // Pega as transações desde a abertura do turno
-    const shiftTransactions = transactions.filter(t => new Date(t.date).getTime() >= new Date(currentShift.openedAt.split('T')[0]).getTime());
+    const shiftTransactions = transactions.filter(t => new Date(t.date).getTime() >= new Date(currentShift.openedAt.toBRTDateString()).getTime());
     // Lógica simplificada de dinheiro: Entradas - Saídas
     // (Na prática, deveria considerar apenas transações em DINHEIRO se o caixa for apenas a gaveta de dinheiro,
     // mas aqui faremos um fechamento geral para demonstração)
@@ -907,7 +907,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
 
     const closedShift: Shift = {
       ...currentShift,
-      closedAt: new Date().toISOString(),
+      closedAt: new Date().toBRTISOString(),
       closedBy,
       finalCashExpected: expected,
       finalCashActual: actualCash,

@@ -26,9 +26,9 @@ export const FinancialAnalysis: React.FC = () => {
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'EXACT' | 'RANGE'>('ALL');
-  const [exactDate, setExactDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [exactDate, setExactDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
+  const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
   
   const [showModal, setShowModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -40,7 +40,7 @@ export const FinancialAnalysis: React.FC = () => {
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const parts = dateStr.split('T')[0].split('-');
+    const parts = dateStr.toBRTDateString().split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
@@ -73,10 +73,10 @@ export const FinancialAnalysis: React.FC = () => {
   // Filter stock movements by the same date range if needed
   const filteredMovements = stockMovements.filter(m => {
     if (dateFilterMode === 'EXACT' && exactDate) {
-      if (m.date.split('T')[0] !== exactDate) return false;
+      if (m.date.toBRTDateString() !== exactDate) return false;
     }
     if (dateFilterMode === 'RANGE' && startDate && endDate) {
-      if (m.date.split('T')[0] < startDate || m.date.split('T')[0] > endDate) return false;
+      if (m.date.toBRTDateString() < startDate || m.date.toBRTDateString() > endDate) return false;
     }
     return true;
   });
@@ -126,7 +126,7 @@ export const FinancialAnalysis: React.FC = () => {
     const prod = products.find(p => p.id === prodId);
 
     if (faturamentoFilterDate) {
-      if (m.date.split('T')[0] !== faturamentoFilterDate) {
+      if (m.date.toBRTDateString() !== faturamentoFilterDate) {
         return false;
       }
     }
@@ -191,7 +191,7 @@ export const FinancialAnalysis: React.FC = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Date-based Pagination Logic
-  const uniqueDates = Array.from(new Set(allDisplayTransactions.map(t => t.date.split('T')[0]))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const uniqueDates = Array.from(new Set(allDisplayTransactions.map(t => t.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   
   // Se o total de dias mudar após um filtro, garantir que a página não fique fora do limite
   if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
@@ -199,13 +199,13 @@ export const FinancialAnalysis: React.FC = () => {
   }
 
   const currentDate = uniqueDates[currentPage - 1];
-  const paginatedTransactions = allDisplayTransactions.filter(t => t.date.split('T')[0] === currentDate);
+  const paginatedTransactions = allDisplayTransactions.filter(t => t.date.toBRTDateString() === currentDate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description) return;
     addTransaction({
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toBRTISOString().toBRTDateString(),
       type,
       category,
       amount: parseCurrency(amount),
@@ -419,7 +419,7 @@ export const FinancialAnalysis: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-700 mb-1">Selecione o dia exato:</label>
                       <input
                         type="date"
-                        max={new Date().toISOString().split('T')[0]}
+                        max={new Date().toBRTISOString().toBRTDateString()}
                         value={exactDate}
                         onChange={(e) => setExactDate(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -435,7 +435,7 @@ export const FinancialAnalysis: React.FC = () => {
                         <label className="block text-xs font-bold text-slate-700 mb-1">Data Inicial:</label>
                         <input
                           type="date"
-                          max={endDate || new Date().toISOString().split('T')[0]}
+                          max={endDate || new Date().toBRTISOString().toBRTDateString()}
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -446,7 +446,7 @@ export const FinancialAnalysis: React.FC = () => {
                         <input
                           type="date"
                           min={startDate}
-                          max={new Date().toISOString().split('T')[0]}
+                          max={new Date().toBRTISOString().toBRTDateString()}
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -459,8 +459,8 @@ export const FinancialAnalysis: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -469,8 +469,8 @@ export const FinancialAnalysis: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 15 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 15 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -479,8 +479,8 @@ export const FinancialAnalysis: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setStartDate(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
-                            setEndDate(new Date().toISOString().split('T')[0]);
+                            setStartDate(new Date(Date.now() - 30 * 86400000).toBRTISOString().toBRTDateString());
+                            setEndDate(new Date().toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -491,8 +491,8 @@ export const FinancialAnalysis: React.FC = () => {
                           onClick={() => {
                             const now = new Date();
                             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                            setStartDate(firstDay.toISOString().split('T')[0]);
-                            setEndDate(now.toISOString().split('T')[0]);
+                            setStartDate(firstDay.toBRTISOString().toBRTDateString());
+                            setEndDate(now.toBRTISOString().toBRTDateString());
                           }}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
                         >
@@ -560,7 +560,7 @@ export const FinancialAnalysis: React.FC = () => {
                   <tr key={tx.id} className="hover:bg-slate-100/40 transition">
                     <td className="py-3.5 px-5 text-xs text-slate-700 flex items-center gap-1.5 whitespace-nowrap">
                       <Calendar className="w-3.5 h-3.5" />
-                      {tx.date.split('T')[0].split('-').reverse().join('/')}
+                      {tx.date.toBRTDateString().split('-').reverse().join('/')}
                     </td>
                     <td className="py-3.5 px-5 font-medium text-slate-900">
                       {tx.description}
@@ -768,7 +768,7 @@ export const FinancialAnalysis: React.FC = () => {
                     <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
                       <div>
                         <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
                         {m.observation && (
                           <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
                         )}
@@ -841,7 +841,7 @@ export const FinancialAnalysis: React.FC = () => {
                     <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
                       <div>
                         <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
                         {m.observation && (
                           <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
                         )}
@@ -914,7 +914,7 @@ export const FinancialAnalysis: React.FC = () => {
                     <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
                       <div>
                         <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.split('T')[0].split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
+                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
                         {m.observation && (
                           <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
                         )}

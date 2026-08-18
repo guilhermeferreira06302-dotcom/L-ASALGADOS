@@ -17,7 +17,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
   const [items, setItems] = useState<{id: string, selectedCat: string, selectedMatId: string, matQty: string, paymentMethod: string}[]>([
     { id: crypto.randomUUID(), selectedCat: '', selectedMatId: '', matQty: '', paymentMethod: '' }
   ]);
-  const [matDate, setMatDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [matDate, setMatDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
   const [matTime, setMatTime] = useState<string>(new Date().toTimeString().slice(0, 5));
   const [matNotes, setMatNotes] = useState<string>('');
   const [outflowReason, setOutflowReason] = useState<string>('');
@@ -26,7 +26,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
   useEffect(() => {
     // Atualiza a cada segundo para garantir a virada do minuto
     const interval = setInterval(() => {
-      setMatDate(new Date().toISOString().split('T')[0]);
+      setMatDate(new Date().toBRTISOString().toBRTDateString());
       setMatTime(new Date().toTimeString().slice(0, 5));
     }, 1000);
     return () => clearInterval(interval);
@@ -355,7 +355,7 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                   required
                   disabled
                   readOnly
-                  max={new Date().toISOString().split('T')[0]}
+                  max={new Date().toBRTISOString().toBRTDateString()}
                   value={matDate}
                   onChange={(e) => setMatDate(e.target.value)}
                   className="w-full bg-slate-100/80 border border-slate-200 rounded-xl p-3 text-slate-700 font-bold text-xs cursor-not-allowed select-none focus:outline-none transition opacity-80"

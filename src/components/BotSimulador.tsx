@@ -87,7 +87,7 @@ export const BotSimulador: React.FC = () => {
           const outCategories: any[] = ['MANUTENCAO', 'SALARIO', 'FORNECEDOR', 'IMPOSTOS'];
           
           currentApp.addTransaction({
-            date: new Date().toISOString().split('T')[0],
+            date: new Date().toBRTISOString().toBRTDateString(),
             type: isSaida ? 'SAIDA' : 'ENTRADA',
             category: isSaida ? outCategories[Math.floor(Math.random() * outCategories.length)] : 'VENDAS',
             amount: amount,
