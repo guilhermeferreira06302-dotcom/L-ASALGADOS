@@ -1,4 +1,4 @@
-import { User, Ingredient, Product, Order, FinancialTransaction, InventoryAudit } from '../types';
+import { User, Ingredient, Product, FinancialTransaction, InventoryAudit } from '../types';
 
 export const INITIAL_USERS: User[] = [
   {
@@ -33,7 +33,7 @@ export const INITIAL_INGREDIENTS: Ingredient[] = [];
 
 export const INITIAL_PRODUCTS: Product[] = [];
 
-export const INITIAL_ORDERS: Order[] = [];
+
 
 export const INITIAL_TRANSACTIONS: FinancialTransaction[] = [];
 

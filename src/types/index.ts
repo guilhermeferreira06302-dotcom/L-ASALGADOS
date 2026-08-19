@@ -52,31 +52,7 @@ export interface Product {
   maxStock?: number;
 }
 
-export type OrderStatus = 'PENDENTE' | 'EM_PREPARO' | 'PRONTO' | 'ENTREGUE' | 'CANCELADO';
 export type PaymentMethod = 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'DINHEIRO';
-export type OrderType = 'MESA' | 'BALCAO' | 'DELIVERY';
-
-export interface OrderItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  notes?: string;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: number;
-  items: OrderItem[];
-  status: OrderStatus;
-  total: number;
-  paymentMethod: PaymentMethod;
-  customerName: string;
-  orderType: OrderType;
-  tableNumber?: string;
-  createdAt: string;
-  cashierName: string;
-}
 
 export type TransactionType = 'ENTRADA' | 'SAIDA';
 export type TransactionCategory = 'VENDAS' | 'FORNECEDOR' | 'SALARIO' | 'MANUTENCAO' | 'IMPOSTOS' | 'PREJUIZO' | 'OUTROS';

@@ -101,7 +101,8 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   stockMovements.forEach(movement => {
     if (movement.type === 'SAIDA' && movement.reason !== 'Prejuízo' && movement.date >= sevenDaysAgoFullISO) {
       const dateObj = new Date(movement.date);
-      const hour = dateObj.getHours();
+      const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const hour = parseInt(timeStr, 10);
       hourlyCounts[hour] = (hourlyCounts[hour] || 0) + movement.quantity;
     }
   });

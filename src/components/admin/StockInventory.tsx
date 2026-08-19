@@ -16,8 +16,7 @@ export const StockInventory: React.FC = () => {
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'EXACT' | 'RANGE'>('ALL');
-  const [exactDate, setExactDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
   const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
   const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
 
@@ -67,18 +66,18 @@ export const StockInventory: React.FC = () => {
   const formatLastUpdatedDisplay = (lastUpdated?: string): string => {
     if (!lastUpdated) return '';
     
-    const formatDDMM = (d: Date) => {
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      return `${day}/${month}`;
+    const formatBrtDDMM = (d: Date) => {
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
+    };
+
+    const formatBrtTime = (d: Date) => {
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     };
 
     // Tentar processar como Data ISO
     const dateObj = new Date(lastUpdated);
     if (!isNaN(dateObj.getTime())) {
-      const hours = String(dateObj.getHours()).padStart(2, '0');
-      const mins = String(dateObj.getMinutes()).padStart(2, '0');
-      return `${formatDDMM(dateObj)} - ${hours}:${mins}`;
+      return `${formatBrtDDMM(dateObj)} - ${formatBrtTime(dateObj)}`;
     }
 
     const lower = lastUpdated.toLowerCase();
@@ -86,21 +85,19 @@ export const StockInventory: React.FC = () => {
     if (lower.includes('hoje')) {
       const timeMatch = lastUpdated.match(/(\d{2}:\d{2})/);
       const time = timeMatch ? timeMatch[1] : '00:00';
-      return `${formatDDMM(new Date())} - ${time}`;
+      return `${formatBrtDDMM(new Date())} - ${time}`;
     }
     
     if (lower.includes('ontem')) {
       const yesterday = new Date(Date.now() - 86400000);
       const timeMatch = lastUpdated.match(/(\d{2}:\d{2})/);
       const time = timeMatch ? timeMatch[1] : '00:00';
-      return `${formatDDMM(yesterday)} - ${time}`;
+      return `${formatBrtDDMM(yesterday)} - ${time}`;
     }
     
     if (lower.includes('agora') || lower.includes('auditado') || lower.includes('sem entrada')) {
       const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const mins = String(now.getMinutes()).padStart(2, '0');
-      return `${formatDDMM(now)} - ${hours}:${mins}`;
+      return `${formatBrtDDMM(now)} - ${formatBrtTime(now)}`;
     }
 
     return lastUpdated;
@@ -110,10 +107,6 @@ export const StockInventory: React.FC = () => {
     if (!isStockActive(ing)) return false;
     if (searchTerm && !ing.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterCat !== 'ALL' && ing.category !== filterCat) return false;
-    if (dateFilterMode === 'EXACT' && exactDate) {
-      const ingDate = getIngredientDateStr(ing.lastUpdated);
-      if (ingDate !== exactDate) return false;
-    }
     if (dateFilterMode === 'RANGE' && startDate && endDate) {
       const ingDate = getIngredientDateStr(ing.lastUpdated);
       if (ingDate < startDate || ingDate > endDate) return false;
@@ -223,7 +216,6 @@ export const StockInventory: React.FC = () => {
                 <Calendar className={`w-4 h-4 ${dateFilterMode !== 'ALL' ? 'text-amber-600' : 'text-slate-600'}`} />
                 <span>
                   {dateFilterMode === 'ALL' && 'Filtro de Data'}
-                  {dateFilterMode === 'EXACT' && `Dia: ${formatDateDisplay(exactDate)}`}
                   {dateFilterMode === 'RANGE' && `${formatDateDisplay(startDate)} a ${formatDateDisplay(endDate)}`}
                 </span>
               </div>
@@ -259,38 +251,6 @@ export const StockInventory: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => setDateFilterMode('EXACT')}
-                    className={`py-1.5 rounded-lg transition cursor-pointer ${dateFilterMode === 'EXACT' ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold' : 'hover:text-slate-900'}`}
-                  >
-                    Dia Exato
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateFilterMode('RANGE')}
-                    className={`py-1.5 rounded-lg transition cursor-pointer ${dateFilterMode === 'RANGE' ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold' : 'hover:text-slate-900'}`}
-                  >
-                    Período
-                  </button>
-                </div>
-
-                {dateFilterMode === 'EXACT' && (
-                  <div className="space-y-3 pt-1 animate-in fade-in duration-150">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Selecione o dia exato:</label>
-                      <input
-                        type="date"
-                        max={new Date().toBRTISOString().toBRTDateString()}
-                        value={exactDate}
-                        onChange={(e) => setExactDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-                  </div>
-                )}
 
                 {dateFilterMode === 'RANGE' && (
                   <div className="space-y-3 pt-1 animate-in fade-in duration-150">
@@ -424,7 +384,6 @@ export const StockInventory: React.FC = () => {
             <span>
               Filtrando por data de atualização: {' '}
               <strong className="font-extrabold text-amber-950">
-                {dateFilterMode === 'EXACT' && `Dia exato (${formatDateDisplay(exactDate)})`}
                 {dateFilterMode === 'RANGE' && `Período (${formatDateDisplay(startDate)} a ${formatDateDisplay(endDate)})`}
               </strong>
             </span>

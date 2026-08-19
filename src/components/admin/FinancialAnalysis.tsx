@@ -25,8 +25,7 @@ export const FinancialAnalysis: React.FC = () => {
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'EXACT' | 'RANGE'>('ALL');
-  const [exactDate, setExactDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
   const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
   const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
   
@@ -56,9 +55,6 @@ export const FinancialAnalysis: React.FC = () => {
     if (filterCategory !== 'TODAS' && t.category !== filterCategory) return false;
     if (searchTerm && !t.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
-    if (dateFilterMode === 'EXACT' && exactDate) {
-      if (t.date !== exactDate) return false;
-    }
     if (dateFilterMode === 'RANGE' && startDate && endDate) {
       if (t.date < startDate || t.date > endDate) return false;
     }
@@ -72,9 +68,6 @@ export const FinancialAnalysis: React.FC = () => {
 
   // Filter stock movements by the same date range if needed
   const filteredMovements = stockMovements.filter(m => {
-    if (dateFilterMode === 'EXACT' && exactDate) {
-      if (m.date.toBRTDateString() !== exactDate) return false;
-    }
     if (dateFilterMode === 'RANGE' && startDate && endDate) {
       if (m.date.toBRTDateString() < startDate || m.date.toBRTDateString() > endDate) return false;
     }
@@ -359,7 +352,6 @@ export const FinancialAnalysis: React.FC = () => {
                 <Calendar className={`w-4 h-4 ${dateFilterMode !== 'ALL' ? 'text-emerald-600' : 'text-slate-600'}`} />
                 <span>
                   {dateFilterMode === 'ALL' && 'Todo o Período'}
-                  {dateFilterMode === 'EXACT' && `Dia: ${formatDateDisplay(exactDate)}`}
                   {dateFilterMode === 'RANGE' && `${formatDateDisplay(startDate)} a ${formatDateDisplay(endDate)}`}
                 </span>
               </div>
@@ -395,38 +387,6 @@ export const FinancialAnalysis: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => setDateFilterMode('EXACT')}
-                    className={`py-1.5 rounded-lg transition cursor-pointer ${dateFilterMode === 'EXACT' ? 'bg-emerald-500 text-white shadow-xs font-extrabold' : 'hover:text-slate-900'}`}
-                  >
-                    Dia Exato
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateFilterMode('RANGE')}
-                    className={`py-1.5 rounded-lg transition cursor-pointer ${dateFilterMode === 'RANGE' ? 'bg-emerald-500 text-white shadow-xs font-extrabold' : 'hover:text-slate-900'}`}
-                  >
-                    Período
-                  </button>
-                </div>
-
-                {dateFilterMode === 'EXACT' && (
-                  <div className="space-y-3 pt-1 animate-in fade-in duration-150">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Selecione o dia exato:</label>
-                      <input
-                        type="date"
-                        max={new Date().toBRTISOString().toBRTDateString()}
-                        value={exactDate}
-                        onChange={(e) => setExactDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
-                  </div>
-                )}
 
                 {dateFilterMode === 'RANGE' && (
                   <div className="space-y-3 pt-1 animate-in fade-in duration-150">

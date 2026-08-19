@@ -31,13 +31,18 @@ const MainContent: React.FC = () => {
   });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
-  const [currentHour, setCurrentHour] = useState(new Date().getHours());
 
-  // Update current hour periodically to handle shifts correctly if left open
-  React.useEffect(() => {
+  const getCurrentBRTHour = () => {
+    const d = new Date();
+    const brt = new Date(d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return brt.getHours();
+  };
+  const [currentHour, setCurrentHour] = useState(getCurrentBRTHour());
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentHour(new Date().getHours());
-    }, 60000);
+      setCurrentHour(getCurrentBRTHour());
+    }, 60000); // verify every minute
     return () => clearInterval(interval);
   }, []);
 
