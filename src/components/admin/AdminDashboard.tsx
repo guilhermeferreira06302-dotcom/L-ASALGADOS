@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 
 export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> = ({ onNavigateTab }) => {
-  const { transactions, ingredients, products, orders, stockMovements } = useApp();
+  const { transactions, ingredients, products, stockMovements } = useApp();
 
   // Helper to get product price and cost
   const getProductPrice = (ingredientId: string) => {

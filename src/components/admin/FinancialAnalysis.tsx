@@ -8,7 +8,7 @@ import {
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const FinancialAnalysis: React.FC = () => {
-  const { transactions, addTransaction, stockMovements, ingredients, orders, products, settlePendingDebt, convertLoss, convertDebtToLoss } = useApp();
+  const { transactions, addTransaction, stockMovements, ingredients, products, settlePendingDebt, convertLoss, convertDebtToLoss } = useApp();
   const [filterType, setFilterType] = useState<string>('TODOS');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [searchTerm, setSearchTerm] = useState('');

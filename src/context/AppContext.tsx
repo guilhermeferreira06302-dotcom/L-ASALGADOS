@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  User, UserRole, Ingredient, Product, Order, FinancialTransaction, 
-  InventoryAudit, OrderStatus, isStockActive, StockMovement, Shift
+  User, UserRole, Ingredient, Product, FinancialTransaction, 
+  InventoryAudit, isStockActive, StockMovement, Shift
 } from '../types';
 import { 
   INITIAL_USERS, INITIAL_INGREDIENTS, INITIAL_PRODUCTS, 
-  INITIAL_ORDERS, INITIAL_TRANSACTIONS, INITIAL_AUDITS 
+  INITIAL_TRANSACTIONS, INITIAL_AUDITS 
 } from '../data/initialData';
 import { GoogleGenAI } from '@google/genai';
 import { supabase } from '../lib/supabase';
@@ -15,7 +15,6 @@ interface AppContextType {
   users: User[];
   ingredients: Ingredient[];
   products: Product[];
-  orders: Order[];
   transactions: FinancialTransaction[];
   audits: InventoryAudit[];
   stockMovements: StockMovement[];
@@ -37,9 +36,6 @@ interface AppContextType {
   editStockMovement: (movementId: string, updatedData: Partial<StockMovement>) => Promise<void>;
   deleteStockMovement: (movementId: string) => Promise<void>;
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
-  // Order actions
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Order;
-  updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   // Financial actions
   addTransaction: (tx: Omit<FinancialTransaction, 'id'>) => void;
   settlePendingDebt: (movementId: string) => Promise<void>;
@@ -59,6 +55,7 @@ interface AppContextType {
   openShift: (initialCash: number, openedBy: string) => void;
   closeShift: (actualCash: number, actualCard: number, closedBy: string, notes?: string) => void;
   cancelShift: (shiftId?: string) => void;
+  updateShift: (shift: Shift) => Promise<void>;
   syncStatus: 'SYNCED' | 'SYNCING' | 'ERROR';
   lastSyncTime: string | null;
 }
@@ -75,7 +72,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<User[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [audits, setAudits] = useState<InventoryAudit[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
@@ -95,7 +91,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           { data: dbCategories },
           { data: dbIngredients },
           { data: dbProducts },
-          { data: dbOrders },
           { data: dbTransactions },
           { data: dbMovements },
           { data: dbAudits },
@@ -105,7 +100,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('custom_categories').select('*'),
           supabase.from('ingredients').select('*'),
           supabase.from('products').select('*'),
-          supabase.from('orders').select('*'),
           supabase.from('transactions').select('*'),
           supabase.from('stock_movements').select('*'),
           supabase.from('inventory_audits').select('*'),
@@ -116,7 +110,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (dbCategories) setCustomCategories(dbCategories.map((c: any) => c.name));
         if (dbIngredients) setIngredients(dbIngredients);
         if (dbProducts) setProducts(dbProducts);
-        if (dbOrders) setOrders(dbOrders);
         if (dbTransactions) setTransactions(dbTransactions);
         if (dbMovements) setStockMovements(dbMovements);
         if (dbAudits) setAudits(dbAudits);
@@ -168,9 +161,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             break;
           case 'ingredients':
             applyChange(setIngredients);
-            break;
-          case 'orders':
-            applyChange(setOrders);
             break;
           case 'transactions':
             applyChange(setTransactions);
@@ -630,56 +620,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAudits(prev => [newAudit, ...prev]);
   };
 
-  const createOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Promise<Order> => {
-    const highestNum = orders.reduce((max, o) => Math.max(max, o.orderNumber), 100);
-    const newOrder: Order = {
-      ...orderData,
-      id: `ord-${Date.now()}`,
-      orderNumber: highestNum + 1,
-      status: 'EM_PREPARO',
-      createdAt: new Date().toBRTISOString()
-    };
-    const { error } = await supabase.from('orders').insert(newOrder);
-    if (error) {
-      console.error('Erro ao criar pedido:', error);
-      alert('Erro ao salvar pedido no banco: ' + error.message);
-      throw error;
-    }
-    setOrders(prev => [newOrder, ...prev]);
 
-    // Add financial entry immediately or upon delivery
-    await addTransaction({
-      date: new Date().toBRTISOString().toBRTDateString(),
-      type: 'ENTRADA',
-      category: 'VENDAS',
-      amount: newOrder.total,
-      description: `Pedido #${newOrder.orderNumber} - ${newOrder.orderType} (${newOrder.customerName})`,
-      relatedOrderId: newOrder.id
-    });
-
-    return newOrder;
-  };
-
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    const targetOrder = orders.find(o => o.id === orderId);
-    if (!targetOrder) return;
-
-    // Ao entregar o pedido, deduz a quantidade vendida direto do estoque do produto correspondente!
-    if (newStatus === 'ENTREGUE' && targetOrder.status !== 'ENTREGUE') {
-      await Promise.all(targetOrder.items.map(async item => {
-        const targetIngId = `ing-prod-${item.productId}`;
-        await adjustStock(targetIngId, -item.quantity, 'Venda', undefined, `Pedido #${targetOrder.orderNumber}`);
-      }));
-    }
-
-    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-    if (error) {
-      console.error('Erro ao atualizar status do pedido:', error);
-      alert('Erro ao atualizar pedido no banco: ' + error.message);
-      throw error;
-    }
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-  };
 
   const addTransaction = async (tx: Omit<FinancialTransaction, 'id'>) => {
     const newTx: FinancialTransaction = {
@@ -865,7 +806,6 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
   const resetToDefaultData = () => {
     setIngredients(INITIAL_INGREDIENTS);
     setProducts(INITIAL_PRODUCTS);
-    setOrders(INITIAL_ORDERS);
     setTransactions(INITIAL_TRANSACTIONS);
     setAudits(INITIAL_AUDITS);
     setStockMovements([]);
@@ -949,6 +889,21 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     }
   };
 
+  const updateShift = async (updatedShift: Shift) => {
+    const { error } = await supabase.from('shifts').update(updatedShift).eq('id', updatedShift.id);
+    if (error) {
+      console.error('Erro ao atualizar turno:', error);
+      alert('Erro ao atualizar turno no banco: ' + error.message);
+      throw error;
+    }
+    
+    if (currentShift && currentShift.id === updatedShift.id) {
+      setCurrentShift(updatedShift);
+    }
+    
+    setShifts(prev => prev.map(s => s.id === updatedShift.id ? updatedShift : s));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -956,7 +911,6 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         users,
         ingredients,
         products,
-        orders,
         transactions,
         audits,
         stockMovements,
@@ -977,8 +931,6 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         editStockMovement,
         deleteStockMovement,
         performInventoryAudit,
-        createOrder,
-        updateOrderStatus,
         addTransaction,
         settlePendingDebt,
         convertDebtToLoss,
@@ -993,6 +945,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         openShift,
         closeShift,
         cancelShift,
+        updateShift,
         syncStatus,
         lastSyncTime
       }}

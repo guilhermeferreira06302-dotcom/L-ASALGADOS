@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Play, Square, DollarSign, User as UserIcon, CheckCircle, Clock, Trash2, Edit3, Save, X } from 'lucide-react';
 import { currencyMask, parseCurrency } from '../../utils/masks';
+import { Shift } from '../../types';
 
 export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?: () => void }> = ({ isAdminView, onNavigateBack }) => {
-  const { currentShift, openShift, closeShift, cancelShift, addTransaction, currentUser, shifts } = useApp();
+  const { currentShift, openShift, closeShift, cancelShift, updateShift, addTransaction, currentUser, shifts } = useApp();
   
   // Abertura states
   const [initialCashStr, setInitialCashStr] = useState('');
   const [operator, setOperator] = useState(currentUser?.name || '');
+  
+  // Edição states
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editData, setEditData] = useState<Partial<Shift>>({});
   
   // Fechamento states
   const [actualCashStr, setActualCashStr] = useState('');
@@ -128,7 +133,14 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                     <td className="py-3 px-4 text-xs font-medium text-right text-slate-400">
                       ---
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right flex justify-end gap-1">
+                      <button 
+                        onClick={() => { setEditingShift(currentShift); setEditData(currentShift); }}
+                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
+                        title="Editar turno"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => { if(window.confirm('Excluir este turno em andamento?')) cancelShift() }}
                         className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
@@ -172,7 +184,14 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                     <td className="py-3 px-4 text-xs font-extrabold text-right text-slate-900 bg-slate-50/50">
                       R$ {((shift.finalCashActual || 0) + (shift.finalCardActual || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right flex justify-end gap-1">
+                      <button 
+                        onClick={() => { setEditingShift(shift); setEditData(shift); }}
+                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
+                        title="Editar turno"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => { if(window.confirm('Excluir histórico deste turno?')) cancelShift(shift.id) }}
                         className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
@@ -398,6 +417,112 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Turno */}
+      {editingShift && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-blue-50">
+              <h2 className="font-extrabold text-blue-900 flex items-center gap-2">
+                <Edit3 className="w-5 h-5" />
+                Editar Turno
+              </h2>
+              <button onClick={() => setEditingShift(null)} className="text-blue-400 hover:text-blue-600 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Colaborador (Responsável)</label>
+                <input
+                  type="text"
+                  value={editData.openedBy || ''}
+                  onChange={e => setEditData({ ...editData, openedBy: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Abertura (Início)</label>
+                <input
+                  type="datetime-local"
+                  value={editData.openedAt ? new Date(new Date(editData.openedAt).getTime() - (new Date(editData.openedAt).getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                  onChange={e => setEditData({ ...editData, openedAt: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Fechamento (Término)</label>
+                <input
+                  type="datetime-local"
+                  value={editData.closedAt ? new Date(new Date(editData.closedAt).getTime() - (new Date(editData.closedAt).getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                  onChange={e => setEditData({ ...editData, closedAt: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Fundo Inicial (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editData.initialCash !== undefined ? editData.initialCash : 0}
+                  onChange={e => setEditData({ ...editData, initialCash: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Vendas (Dinheiro) (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editData.finalCashActual !== undefined ? editData.finalCashActual : 0}
+                  onChange={e => setEditData({ ...editData, finalCashActual: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Vendas (Cartão/PIX) (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editData.finalCardActual !== undefined ? editData.finalCardActual : 0}
+                  onChange={e => setEditData({ ...editData, finalCardActual: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Observações</label>
+                <textarea
+                  value={editData.notes || ''}
+                  onChange={e => setEditData({ ...editData, notes: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setEditingShift(null)}
+                  className="flex-1 py-3 text-slate-600 font-bold bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (editData.id) {
+                      updateShift(editData as Shift);
+                      setEditingShift(null);
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-extrabold text-sm shadow-md transition"
+                >
+                  <Save className="w-4 h-4" />
+                  Salvar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

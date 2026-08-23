@@ -44,43 +44,10 @@ export const BotSimulador: React.FC = () => {
 
     const actionTimer = setInterval(() => {
       const currentApp = appRef.current;
-      const actions = ['ORDER', 'STOCK', 'TRANSACTION', 'PRODUCT'];
+      const actions = ['STOCK', 'TRANSACTION', 'PRODUCT'];
       const action = actions[Math.floor(Math.random() * actions.length)];
 
       switch (action) {
-        case 'ORDER':
-          if (currentApp.products.length > 0) {
-            const randomProd = currentApp.products[Math.floor(Math.random() * currentApp.products.length)];
-            const quantity = Math.floor(Math.random() * 15) + 5; // 5 a 20 itens por pedido!
-            const total = randomProd.price * quantity;
-            currentApp.createOrder({
-              items: [{ productId: randomProd.id, productName: randomProd.name, quantity, price: randomProd.price }],
-              total: total,
-              paymentMethod: 'PIX',
-              customerName: 'Cliente VIP Simulado',
-              orderType: 'BALCAO',
-              cashierName: 'Bot Turbo'
-            });
-            addLog(`Mega Pedido: ${quantity}x ${randomProd.name} (R$ ${total.toFixed(2)})`);
-          } else {
-             const num = Math.floor(Math.random() * 1000);
-             currentApp.addProduct({
-               name: `Combo Prime ${num}`,
-               category: 'COMBO',
-               price: 189.90 + (Math.random() * 100), // Preço altíssimo
-               costPrice: 25.00 + (Math.random() * 15), // Custo baixo -> Alta Margem
-               image: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=500&auto=format&fit=crop&q=80',
-               available: true,
-               description: 'Lançamento Exclusivo pelo Bot Turbo',
-               prepTimeMin: 15,
-               salesCountMonthly: Math.floor(Math.random() * 500),
-               minStock: 20,
-               maxStock: 100,
-               recipe: []
-             });
-             addLog(`Produto Premium Criado: Combo Prime ${num}`);
-          }
-          break;
         case 'TRANSACTION':
           const amount = Math.floor(Math.random() * 5000) + 1000; // 1000 a 6000
           const isSaida = Math.random() > 0.8; // Apenas 20% de chance de ser saída, 80% entrada!

@@ -39,7 +39,7 @@ const MainContent: React.FC = () => {
   };
   const [currentHour, setCurrentHour] = useState(getCurrentBRTHour());
 
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
       setCurrentHour(getCurrentBRTHour());
     }, 60000); // verify every minute
