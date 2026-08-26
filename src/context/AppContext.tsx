@@ -38,9 +38,11 @@ interface AppContextType {
   performInventoryAudit: (auditorName: string, adjustments: { ingredientId: string; actualStock: number }[], notes?: string) => void;
   // Financial actions
   addTransaction: (tx: Omit<FinancialTransaction, 'id'>) => void;
-  settlePendingDebt: (movementId: string) => Promise<void>;
-  convertDebtToLoss: (movementId: string) => Promise<void>;
-  convertLoss: (movementId: string, target: 'PENDENTE' | 'FATURAMENTO') => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  settlePendingDebt: (movementId: string, reasonOverride?: string) => Promise<void>;
+  convertDebtToLoss: (movementId: string, reasonOverride?: string) => Promise<void>;
+  convertLoss: (movementId: string, target: 'PENDENTE' | 'FATURAMENTO', reasonOverride?: string) => Promise<void>;
+  acceptStockRequest: (movementId: string) => Promise<void>;
   // Custom categories
   customCategories: string[];
   addCustomCategory: (categoryName: string) => void;
@@ -636,14 +638,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions(prev => [newTx, ...prev]);
   };
 
-  const settlePendingDebt = async (movementId: string) => {
+  const deleteTransaction = async (id: string) => {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) {
+      console.error('Erro ao deletar transação:', error);
+      alert('Erro ao excluir transação no banco: ' + error.message);
+      throw error;
+    }
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  const settlePendingDebt = async (movementId: string, reasonOverride?: string) => {
     const targetMov = stockMovements.find(m => m.id === movementId);
     if (!targetMov) return;
 
     // Atualiza para 'Dinheiro' ou outra forma padrão de quitação
+    const updateData: Partial<StockMovement> = { paymentMethod: 'Dinheiro' };
+    if (reasonOverride) {
+      updateData.reason = reasonOverride;
+    }
+
     const { error } = await supabase
       .from('stock_movements')
-      .update({ paymentMethod: 'Dinheiro' })
+      .update(updateData)
       .eq('id', movementId);
 
     if (error) {
@@ -654,16 +671,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // A atualização local será feita automaticamente pelo Realtime Subscription,
     // mas também podemos fazer otimisticamente:
-    setStockMovements(prev => prev.map(m => m.id === movementId ? { ...m, paymentMethod: 'Dinheiro' } : m));
+    setStockMovements(prev => prev.map(m => m.id === movementId ? { ...m, ...updateData } : m));
   };
 
-  const convertDebtToLoss = async (movementId: string) => {
+  const convertDebtToLoss = async (movementId: string, reasonOverride?: string) => {
     const targetMov = stockMovements.find(m => m.id === movementId);
     if (!targetMov) return;
 
     const { error } = await supabase
       .from('stock_movements')
-      .update({ paymentMethod: 'Prejuízo', reason: 'Prejuízo' })
+      .update({ paymentMethod: 'Prejuízo', reason: reasonOverride || 'Prejuízo' })
       .eq('id', movementId);
 
     if (error) {
@@ -673,12 +690,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const convertLoss = async (movementId: string, target: 'PENDENTE' | 'FATURAMENTO') => {
+  const convertLoss = async (movementId: string, target: 'PENDENTE' | 'FATURAMENTO', reasonOverride?: string) => {
     const targetMov = stockMovements.find(m => m.id === movementId);
     if (!targetMov) return;
 
     const paymentMethod = target === 'PENDENTE' ? 'Pegou Fiado' : 'Dinheiro';
-    const reason = 'Venda';
+    const reason = reasonOverride || 'Venda';
 
     const { error } = await supabase
       .from('stock_movements')
@@ -687,6 +704,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (error) {
       console.error('Erro ao converter prejuízo:', error);
+      alert('Erro ao atualizar banco de dados: ' + error.message);
+      throw error;
+    }
+  };
+
+  const acceptStockRequest = async (movementId: string) => {
+    const targetMov = stockMovements.find(m => m.id === movementId);
+    if (!targetMov) return;
+
+    const currentObs = targetMov.observation || '';
+    if (currentObs.includes('[ACEITO]')) return;
+
+    const newObs = `[ACEITO] ${currentObs}`.trim();
+
+    const { error } = await supabase
+      .from('stock_movements')
+      .update({ observation: newObs })
+      .eq('id', movementId);
+
+    if (error) {
+      console.error('Erro ao aceitar solicitação:', error);
       alert('Erro ao atualizar banco de dados: ' + error.message);
       throw error;
     }

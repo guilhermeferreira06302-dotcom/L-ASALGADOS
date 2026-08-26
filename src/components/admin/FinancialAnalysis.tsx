@@ -8,7 +8,7 @@ import {
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const FinancialAnalysis: React.FC = () => {
-  const { transactions, addTransaction, stockMovements, ingredients, products, settlePendingDebt, convertLoss, convertDebtToLoss } = useApp();
+  const { transactions, addTransaction, deleteTransaction, stockMovements, ingredients, products, settlePendingDebt, convertLoss, convertDebtToLoss, acceptStockRequest } = useApp();
   const [filterType, setFilterType] = useState<string>('TODOS');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +35,15 @@ export const FinancialAnalysis: React.FC = () => {
   const [showFaturamentoModal, setShowFaturamentoModal] = useState(false);
   const [faturamentoSearchTerm, setFaturamentoSearchTerm] = useState('');
   const [faturamentoFilterDate, setFaturamentoFilterDate] = useState('');
+  const [pendingSearchTerm, setPendingSearchTerm] = useState('');
+  const [pendingFilterDate, setPendingFilterDate] = useState('');
+  const [lossSearchTerm, setLossSearchTerm] = useState('');
+  const [lossFilterDate, setLossFilterDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showFaturamentoTypeModal, setShowFaturamentoTypeModal] = useState(false);
+  const [faturamentoDetailFilter, setFaturamentoDetailFilter] = useState<'Todos' | 'Faturamento Negativo' | 'Faturamento Positivo'>('Todos');
+  const [selectedPendingDebtId, setSelectedPendingDebtId] = useState<string | null>(null);
+  const [faturamentoType, setFaturamentoType] = useState<'Faturamento Positivo' | 'Faturamento Negativo'>('Faturamento Positivo');
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -62,9 +70,8 @@ export const FinancialAnalysis: React.FC = () => {
     return true;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const manualIn = filtered
-    .filter(t => t.type === 'ENTRADA')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const manualInTransactions = filtered.filter(t => t.type === 'ENTRADA');
+  const manualIn = manualInTransactions.reduce((sum, t) => sum + t.amount, 0);
 
   // Filter stock movements by the same date range if needed
   const filteredMovements = stockMovements.filter(m => {
@@ -84,9 +91,8 @@ export const FinancialAnalysis: React.FC = () => {
 
   const totalIn = manualIn + stockSales;
 
-  const manualLoss = filtered
-    .filter(t => t.type === 'SAIDA' && t.category === 'PREJUIZO')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const manualLossTransactions = filtered.filter(t => t.type === 'SAIDA' && t.category === 'PREJUIZO');
+  const manualLoss = manualLossTransactions.reduce((sum, t) => sum + t.amount, 0);
 
   const stockLoss = filteredMovements
     .filter(m => m.type === 'SAIDA' && (m.reason === 'Prejuízo' || m.paymentMethod === 'Prejuízo'))
@@ -124,6 +130,14 @@ export const FinancialAnalysis: React.FC = () => {
       }
     }
 
+    if (faturamentoDetailFilter === 'Faturamento Negativo') {
+      if (!m.reason || !m.reason.includes('Faturamento Negativo')) return false;
+    } else if (faturamentoDetailFilter === 'Faturamento Positivo') {
+      const isPositivo = m.reason && m.reason.includes('Faturamento Positivo');
+      const isVenda = m.reason && m.reason.toLowerCase().includes('venda');
+      if (!isPositivo && !isVenda) return false;
+    }
+
     if (!faturamentoSearchTerm) return true;
     const term = faturamentoSearchTerm.toLowerCase();
     const amountStr = ((prod?.price || 0) * m.quantity).toString();
@@ -132,7 +146,69 @@ export const FinancialAnalysis: React.FC = () => {
            (m.operator || 'Sistema').toLowerCase().includes(term) ||
            m.quantity.toString() === term ||
            amountStr.includes(term);
-  });
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredManualInList = manualInTransactions.filter(t => {
+    if (faturamentoFilterDate) {
+      if (t.date.toBRTDateString() !== faturamentoFilterDate) {
+        return false;
+      }
+    }
+
+    if (faturamentoDetailFilter === 'Faturamento Negativo') {
+      return false; // Manuais não possuem essas observações de transferência
+    } else if (faturamentoDetailFilter === 'Faturamento Positivo') {
+      if (t.category !== 'VENDAS') return false;
+    }
+
+    if (!faturamentoSearchTerm) return true;
+    const term = faturamentoSearchTerm.toLowerCase();
+    const amountStr = t.amount.toString();
+    
+    return t.description.toLowerCase().includes(term) || amountStr.includes(term);
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredFaturamentoTotal = filteredFaturamentoList.reduce((sum, m) => {
+    const prodId = m.ingredientId.replace('ing-prod-', '');
+    const prod = products.find(p => p.id === prodId);
+    return sum + ((prod?.price || 0) * m.quantity);
+  }, 0) + filteredManualInList.reduce((sum, t) => sum + t.amount, 0);
+
+  const filteredPendingDebtsList = pendingDebtsList.filter(m => {
+    const prodId = m.ingredientId.replace('ing-prod-', '');
+    const prod = products.find(p => p.id === prodId);
+    if (pendingFilterDate && m.date.toBRTDateString() !== pendingFilterDate) return false;
+    if (!pendingSearchTerm) return true;
+    const term = pendingSearchTerm.toLowerCase();
+    const amountStr = ((prod?.price || 0) * m.quantity).toString();
+    return m.ingredientName.toLowerCase().includes(term) || 
+           (m.operator || 'Sistema').toLowerCase().includes(term) ||
+           m.quantity.toString() === term ||
+           amountStr.includes(term) ||
+           (m.observation || '').toLowerCase().includes(term);
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredLossList = lossList.filter(m => {
+    const prodId = m.ingredientId.replace('ing-prod-', '');
+    const prod = products.find(p => p.id === prodId);
+    if (lossFilterDate && m.date.toBRTDateString() !== lossFilterDate) return false;
+    if (!lossSearchTerm) return true;
+    const term = lossSearchTerm.toLowerCase();
+    const amountStr = ((prod?.costPrice || 0) * m.quantity).toString();
+    return m.ingredientName.toLowerCase().includes(term) || 
+           (m.operator || 'Sistema').toLowerCase().includes(term) ||
+           m.quantity.toString() === term ||
+           amountStr.includes(term) ||
+           (m.observation || '').toLowerCase().includes(term);
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredManualLossTransactions = manualLossTransactions.filter(t => {
+    if (lossFilterDate && t.date.toBRTDateString() !== lossFilterDate) return false;
+    if (!lossSearchTerm) return true;
+    const term = lossSearchTerm.toLowerCase();
+    const amountStr = t.amount.toString();
+    return t.description.toLowerCase().includes(term) || amountStr.includes(term);
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const saldoPendente = pendingDebtsList.reduce((sum, m) => {
        const prodId = m.ingredientId.replace('ing-prod-', '');
@@ -244,8 +320,19 @@ export const FinancialAnalysis: React.FC = () => {
             </div>
             <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalIn.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             <p className="text-[11px] text-slate-700 mt-1 mb-3">Valor total faturado no período</p>
+            {faturamentoDetailFilter !== 'Todos' && (
+              <div className="mt-2 mb-3 p-2.5 bg-yellow-50 rounded-xl border border-yellow-200 flex flex-col gap-1 shadow-sm">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-yellow-800 uppercase tracking-wide">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Filtro Ativo: {faturamentoDetailFilter}</span>
+                </div>
+                <span className="text-base font-extrabold text-yellow-900">
+                  R$ {filteredFaturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
           </div>
-          {faturamentoList.length > 0 && (
+          {(faturamentoList.length > 0 || manualInTransactions.length > 0) && (
             <button
               onClick={() => setShowFaturamentoModal(true)}
               className="w-full py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl text-xs font-bold transition cursor-pointer"
@@ -285,7 +372,7 @@ export const FinancialAnalysis: React.FC = () => {
           </div>
           <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {totalLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p className="text-[11px] text-slate-700 mt-1 mb-3">Perdas e descartes do período</p>
-          {lossList.length > 0 && (
+          {(lossList.length > 0 || manualLossTransactions.length > 0) && (
             <button
               onClick={() => setShowLossModal(true)}
               className="w-full py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition cursor-pointer"
@@ -689,7 +776,7 @@ export const FinancialAnalysis: React.FC = () => {
       {/* Modal Faturamento */}
       {showFaturamentoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-6xl w-full shadow-2xl flex flex-col max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <ArrowUpRight className="w-5 h-5 text-emerald-500" />
@@ -714,55 +801,133 @@ export const FinancialAnalysis: React.FC = () => {
                 onChange={(e) => setFaturamentoFilterDate(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-40"
               />
+              <select
+                value={faturamentoDetailFilter}
+                onChange={(e) => setFaturamentoDetailFilter(e.target.value as any)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[200px]"
+              >
+                <option value="Todos">Todos os Detalhes</option>
+                <option value="Faturamento Negativo">Faturamento Negativo</option>
+                <option value="Faturamento Positivo">Faturamento Positivo</option>
+              </select>
             </div>
             
             <div className="overflow-y-auto pr-2 space-y-3 flex-1 mb-4">
-              {filteredFaturamentoList.length === 0 ? (
+              {filteredFaturamentoList.length === 0 && filteredManualInList.length === 0 ? (
                 <p className="text-center text-sm text-slate-500 py-6">Nenhum registro encontrado.</p>
               ) : (
-                filteredFaturamentoList.map(m => {
-                  const prodId = m.ingredientId.replace('ing-prod-', '');
-                  const prod = products.find(p => p.id === prodId);
-                  const amount = ((prod?.price || 0) * m.quantity);
-                  return (
-                    <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
-                        {m.observation && (
-                          <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-                        <span className="font-extrabold text-emerald-500">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <button
-                            onClick={async () => {
-                              await convertDebtToLoss(m.id);
-                              if (faturamentoList.length === 1) setShowFaturamentoModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover p/ Prejuízo
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await convertLoss(m.id, 'PENDENTE');
-                              if (faturamentoList.length === 1) setShowFaturamentoModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover para Fiado
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-4 font-bold">Item</th>
+                        <th className="py-3 px-4 font-bold">Data</th>
+                        <th className="py-3 px-4 font-bold">Operador</th>
+                        <th className="py-3 px-4 font-bold">Detalhes</th>
+                        <th className="py-3 px-4 font-bold">Observação</th>
+                        <th className="py-3 px-4 font-bold text-right">Valor</th>
+                        <th className="py-3 px-4 font-bold text-center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredFaturamentoList.map(m => {
+                        const prodId = m.ingredientId.replace('ing-prod-', '');
+                        const prod = products.find(p => p.id === prodId);
+                        const amount = ((prod?.price || 0) * m.quantity);
+                        return (
+                          <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.date.toBRTDateString().split('-').reverse().join('/')}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.operator || 'Sistema'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.reason || '-'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              {m.observation ? <p className="text-sm text-slate-600">{m.observation}</p> : <span className="text-xs text-slate-400">-</span>}
+                            </td>
+                            <td className="py-3 px-4 align-middle text-right">
+                              <span className="font-extrabold text-emerald-500 whitespace-nowrap">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <div className="flex flex-row justify-center items-center gap-1.5 min-w-max mx-auto">
+                                <button
+                                  onClick={async () => {
+                                    await convertDebtToLoss(m.id, 'Prejuízo - Movido de Faturamento');
+                                    if (faturamentoList.length === 1) setShowFaturamentoModal(false);
+                                  }}
+                                  className="whitespace-nowrap px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                >
+                                  Mover p/ Prejuízo
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    await convertLoss(m.id, 'PENDENTE', 'Fiado - Movido de Faturamento');
+                                    if (faturamentoList.length === 1) setShowFaturamentoModal(false);
+                                  }}
+                                  className="whitespace-nowrap px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                >
+                                  Mover para Fiado
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredManualInList.map(t => (
+                        <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm font-bold text-slate-900">{t.description}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">{t.date.toBRTDateString().split('-').reverse().join('/')}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">Sistema (Manual)</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">{t.category || '-'}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <span className="text-xs text-slate-400">-</span>
+                          </td>
+                          <td className="py-3 px-4 align-middle text-right">
+                            <span className="font-extrabold text-emerald-500 whitespace-nowrap">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <div className="flex flex-row justify-center items-center gap-1.5 min-w-max mx-auto">
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Tem certeza que deseja excluir este lançamento manual?')) {
+                                    await deleteTransaction(t.id);
+                                  }
+                                }}
+                                className="whitespace-nowrap px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-100">
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+              {faturamentoDetailFilter !== 'Todos' ? (
+                 <div className="flex flex-col">
+                   <span className="text-[11px] font-bold text-slate-500 uppercase">Total {faturamentoDetailFilter}</span>
+                   <span className="text-lg font-extrabold text-emerald-600">R$ {filteredFaturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                 </div>
+              ) : <div />}
               <button
                 type="button"
                 onClick={() => setShowFaturamentoModal(false)}
@@ -778,7 +943,7 @@ export const FinancialAnalysis: React.FC = () => {
       {/* Modal Quitar Dívidas Pendentes */}
       {showPendingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-6xl w-full shadow-2xl flex flex-col max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-orange-500" />
@@ -788,50 +953,106 @@ export const FinancialAnalysis: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="mb-4 flex gap-3">
+              <input
+                type="text"
+                placeholder="Filtrar por produto, operador, quantidade ou valor..."
+                value={pendingSearchTerm}
+                onChange={(e) => setPendingSearchTerm(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <input
+                type="date"
+                value={pendingFilterDate}
+                onChange={(e) => setPendingFilterDate(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-40"
+              />
+            </div>
             
             <div className="overflow-y-auto pr-2 space-y-3 flex-1 mb-4">
-              {pendingDebtsList.length === 0 ? (
+              {filteredPendingDebtsList.length === 0 ? (
                 <p className="text-center text-sm text-slate-500 py-6">Nenhuma dívida pendente.</p>
               ) : (
-                pendingDebtsList.map(m => {
-                  const prodId = m.ingredientId.replace('ing-prod-', '');
-                  const prod = products.find(p => p.id === prodId);
-                  const amount = ((prod?.price || 0) * m.quantity);
-                  return (
-                    <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
-                        {m.observation && (
-                          <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-                        <span className="font-extrabold text-orange-500">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <button
-                            onClick={async () => {
-                              await convertDebtToLoss(m.id);
-                              if (pendingDebtsList.length === 1) setShowPendingModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover p/ Prejuízo
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await settlePendingDebt(m.id);
-                              if (pendingDebtsList.length === 1) setShowPendingModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover p/ Faturamento
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-4 font-bold">Item</th>
+                        <th className="py-3 px-4 font-bold">Data</th>
+                        <th className="py-3 px-4 font-bold">Operador</th>
+                        <th className="py-3 px-4 font-bold">Detalhes</th>
+                        <th className="py-3 px-4 font-bold">Observação</th>
+                        <th className="py-3 px-4 font-bold text-right">Valor</th>
+                        <th className="py-3 px-4 font-bold text-center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredPendingDebtsList.map(m => {
+                        const prodId = m.ingredientId.replace('ing-prod-', '');
+                        const prod = products.find(p => p.id === prodId);
+                        const amount = ((prod?.price || 0) * m.quantity);
+                        const isAccepted = m.observation?.includes('[ACEITO]');
+                        const cleanObservation = m.observation?.replace('[ACEITO] ', '');
+                        return (
+                          <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
+                              {isAccepted && <span className="px-1.5 py-0.5 rounded text-[11.5px] font-bold bg-emerald-100 text-emerald-700 mt-1 inline-block">ACEITO</span>}
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.date.toBRTDateString().split('-').reverse().join('/')}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.operator || 'Sistema'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.reason || '-'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              {cleanObservation ? <p className="text-sm text-slate-600">{cleanObservation}</p> : <span className="text-xs text-slate-400">-</span>}
+                            </td>
+                            <td className="py-3 px-4 align-middle text-right">
+                              <span className="font-extrabold text-orange-500 whitespace-nowrap">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              {!isAccepted && (
+                                <div className="flex flex-row justify-center items-center gap-1.5 min-w-max mx-auto">
+                                  <button
+                                    onClick={async () => {
+                                      await acceptStockRequest(m.id);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Aceitar
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      await convertDebtToLoss(m.id, 'Prejuízo - Movido de Fiado');
+                                      if (pendingDebtsList.length === 1) setShowPendingModal(false);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Mover p/ Prejuízo
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPendingDebtId(m.id);
+                                      setShowFaturamentoTypeModal(true);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Mover p/ Faturamento
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
@@ -851,7 +1072,7 @@ export const FinancialAnalysis: React.FC = () => {
       {/* Modal Resolver Prejuízos */}
       {showLossModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-6xl w-full shadow-2xl flex flex-col max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-rose-500" />
@@ -861,50 +1082,143 @@ export const FinancialAnalysis: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="mb-4 flex gap-3">
+              <input
+                type="text"
+                placeholder="Filtrar por produto, operador, quantidade ou valor..."
+                value={lossSearchTerm}
+                onChange={(e) => setLossSearchTerm(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <input
+                type="date"
+                value={lossFilterDate}
+                onChange={(e) => setLossFilterDate(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-40"
+              />
+            </div>
             
             <div className="overflow-y-auto pr-2 space-y-3 flex-1 mb-4">
-              {lossList.length === 0 ? (
+              {filteredLossList.length === 0 && filteredManualLossTransactions.length === 0 ? (
                 <p className="text-center text-sm text-slate-500 py-6">Nenhum prejuízo registrado neste período.</p>
               ) : (
-                lossList.map(m => {
-                  const prodId = m.ingredientId.replace('ing-prod-', '');
-                  const prod = products.find(p => p.id === prodId);
-                  const cost = ((prod?.costPrice || 0) * m.quantity);
-                  return (
-                    <div key={m.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200 gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
-                        <p className="text-xs text-slate-500">{m.date.toBRTDateString().split('-').reverse().join('/')} • Operador: {m.operator || 'Sistema'}</p>
-                        {m.observation && (
-                          <p className="text-xs text-slate-600 mt-1 bg-slate-100 p-1.5 rounded inline-block">Obs: {m.observation}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-                        <span className="font-extrabold text-rose-500">Custo: R$ {cost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <button
-                            onClick={async () => {
-                              await convertLoss(m.id, 'PENDENTE');
-                              if (lossList.length === 1) setShowLossModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover para Fiado
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await convertLoss(m.id, 'FATURAMENTO');
-                              if (lossList.length === 1) setShowLossModal(false);
-                            }}
-                            className="flex-1 sm:flex-none px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap"
-                          >
-                            Mover p/ Faturamento
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-4 font-bold">Item</th>
+                        <th className="py-3 px-4 font-bold">Data</th>
+                        <th className="py-3 px-4 font-bold">Operador</th>
+                        <th className="py-3 px-4 font-bold">Detalhes</th>
+                        <th className="py-3 px-4 font-bold">Observação</th>
+                        <th className="py-3 px-4 font-bold text-right">Valor</th>
+                        <th className="py-3 px-4 font-bold text-center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredLossList.map(m => {
+                        const prodId = m.ingredientId.replace('ing-prod-', '');
+                        const prod = products.find(p => p.id === prodId);
+                        const cost = ((prod?.costPrice || 0) * m.quantity);
+                        const isAccepted = m.observation?.includes('[ACEITO]');
+                        const cleanObservation = m.observation?.replace('[ACEITO] ', '');
+                        
+                        return (
+                          <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm font-bold text-slate-900">{m.ingredientName} <span className="text-xs font-normal text-slate-500">({m.quantity} un)</span></p>
+                              {isAccepted && <span className="px-1.5 py-0.5 rounded text-[11.5px] font-bold bg-emerald-100 text-emerald-700 mt-1 inline-block">ACEITO</span>}
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.date.toBRTDateString().split('-').reverse().join('/')}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.operator || 'Sistema'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              <p className="text-sm text-slate-600">{m.reason || '-'}</p>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              {cleanObservation ? <p className="text-sm text-slate-600">{cleanObservation}</p> : <span className="text-xs text-slate-400">-</span>}
+                            </td>
+                            <td className="py-3 px-4 align-middle text-right">
+                              <span className="font-extrabold text-rose-500 whitespace-nowrap">Custo: R$ {cost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </td>
+                            <td className="py-3 px-4 align-middle">
+                              {!isAccepted && (
+                                <div className="flex flex-row justify-center items-center gap-1.5 min-w-max mx-auto">
+                                  <button
+                                    onClick={async () => {
+                                      await acceptStockRequest(m.id);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Aceitar
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      await convertLoss(m.id, 'PENDENTE', 'Fiado - Movido de Prejuízo');
+                                      if (lossList.length === 1) setShowLossModal(false);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Mover para Fiado
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      await convertLoss(m.id, 'FATURAMENTO', 'Faturamento - Movido de Prejuízo');
+                                      if (lossList.length === 1) setShowLossModal(false);
+                                    }}
+                                    className="whitespace-nowrap px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Mover p/ Faturamento
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredManualLossTransactions.map(t => (
+                        <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm font-bold text-slate-900">{t.description}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">{t.date.toBRTDateString().split('-').reverse().join('/')}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">Sistema (Manual)</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <p className="text-sm text-slate-600">{t.category || '-'}</p>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <span className="text-xs text-slate-400">-</span>
+                          </td>
+                          <td className="py-3 px-4 align-middle text-right">
+                            <span className="font-extrabold text-rose-500 whitespace-nowrap">Custo: R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </td>
+                          <td className="py-3 px-4 align-middle">
+                            <div className="flex flex-row justify-center items-center gap-1.5 min-w-max mx-auto">
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Tem certeza que deseja excluir este lançamento manual?')) {
+                                    await deleteTransaction(t.id);
+                                  }
+                                }}
+                                className="whitespace-nowrap px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11.5px] font-bold transition cursor-pointer"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
@@ -917,6 +1231,55 @@ export const FinancialAnalysis: React.FC = () => {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Escolha de Faturamento */}
+      {showFaturamentoTypeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-50/80 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col relative">
+            <button onClick={() => setShowFaturamentoTypeModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer p-1">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Tipo de Faturamento</h3>
+            <p className="text-sm text-slate-600 mb-4">Selecione como este fiado será faturado:</p>
+            <div className="flex flex-col gap-3 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                <input 
+                  type="radio" 
+                  name="faturamentoType" 
+                  checked={faturamentoType === 'Faturamento Positivo'}
+                  onChange={() => setFaturamentoType('Faturamento Positivo')}
+                  className="w-4 h-4 text-emerald-500 border-slate-300 focus:ring-emerald-500"
+                />
+                <span className="font-semibold text-slate-700">Faturamento Positivo</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                <input 
+                  type="radio" 
+                  name="faturamentoType" 
+                  checked={faturamentoType === 'Faturamento Negativo'}
+                  onChange={() => setFaturamentoType('Faturamento Negativo')}
+                  className="w-4 h-4 text-emerald-500 border-slate-300 focus:ring-emerald-500"
+                />
+                <span className="font-semibold text-slate-700">Faturamento Negativo</span>
+              </label>
+            </div>
+            <button
+              onClick={async () => {
+                if (selectedPendingDebtId) {
+                  const observation = `${faturamentoType} - Movido de Fiado`;
+                  await settlePendingDebt(selectedPendingDebtId, observation);
+                  if (pendingDebtsList.length === 1) setShowPendingModal(false);
+                  setShowFaturamentoTypeModal(false);
+                  setSelectedPendingDebtId(null);
+                }
+              }}
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition cursor-pointer"
+            >
+              Confirmar
+            </button>
           </div>
         </div>
       )}
