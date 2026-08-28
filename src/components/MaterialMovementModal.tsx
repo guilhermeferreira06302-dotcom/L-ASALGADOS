@@ -456,7 +456,6 @@ export const MaterialMovementModal: React.FC<MaterialMovementModalProps> = ({ ty
                     <input
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       onChange={(e) => {
                         handlePhotoUpload(e);
                         e.target.value = '';
