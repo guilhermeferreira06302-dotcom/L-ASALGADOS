@@ -436,11 +436,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Atualizar ou Inserir (Upsert) o insumo no banco ANTES da movimentação
     // Isso garante que se for um produto-insumo que ainda não existe no DB, ele será criado,
     // evitando violação de chave estrangeira (foreign key) em stock_movements.
-    const { error: errorIng } = await supabase.from('ingredients').upsert(updatedIng);
+    const dbIng = { ...updatedIng } as any;
+    delete dbIng.price; // Garante que campos extras não quebrem o upsert
+
+    const { error: errorIng } = await supabase.from('ingredients').upsert(dbIng);
     if (errorIng) {
       console.error('Erro ao atualizar estoque do insumo:', errorIng);
       alert('Erro ao atualizar estoque no banco: ' + errorIng.message);
       throw errorIng;
+    }
+
+    // Se for um produto (ing-prod-), precisamos atualizar também a tabela products
+    if (ingredientId.startsWith('ing-prod-')) {
+      const prodId = ingredientId.replace('ing-prod-', '');
+      const { error: errorProd } = await supabase.from('products').update({
+        currentStock: newStock,
+        lastUpdated: new Date().toBRTISOString(),
+        hasReceivedEntry: quantityChange > 0 ? true : (targetIng.hasReceivedEntry ?? (targetIng.currentStock > 0)),
+        ...(operatorName ? { operator: operatorName } : {})
+      }).eq('id', prodId);
+
+      if (!errorProd) {
+        setProducts(prev => prev.map(p => p.id === prodId ? {
+          ...p,
+          currentStock: newStock,
+          lastUpdated: new Date().toBRTISOString(),
+          hasReceivedEntry: quantityChange > 0 ? true : (p.hasReceivedEntry ?? (p.currentStock > 0)),
+          ...(operatorName ? { operator: operatorName } : {})
+        } : p));
+      }
     }
 
     // 3. Registrar a movimentação de estoque
