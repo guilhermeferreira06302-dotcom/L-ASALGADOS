@@ -10,7 +10,8 @@ import confetti from 'canvas-confetti';
 import { quantityMask, parseQuantity } from '../../utils/masks';
 
 export const StockInventory: React.FC = () => {
-  const { ingredients, products, adjustStock, performInventoryAudit, audits, currentUser, customCategories } = useApp();
+  const { ingredients, products, adjustStock, performInventoryAudit, audits, currentUser, customCategories, hasFullHistory, loadFullHistory } = useApp();
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCat, setFilterCat] = useState<string>('ALL');
 
@@ -338,7 +339,12 @@ export const StockInventory: React.FC = () => {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!hasFullHistory) {
+                        setIsLoadingHistory(true);
+                        await loadFullHistory();
+                        setIsLoadingHistory(false);
+                      }
                       setDateFilterMode('ALL');
                       setShowDateFilter(false);
                     }}
@@ -348,10 +354,20 @@ export const StockInventory: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowDateFilter(false)}
-                    className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-xl shadow-md hover:from-amber-400 hover:to-amber-500 transition cursor-pointer"
+                    disabled={isLoadingHistory}
+                    onClick={async () => {
+                      if (dateFilterMode === 'ALL' || (dateFilterMode === 'RANGE' && new Date(startDate).getTime() < Date.now() - 29 * 86400000)) {
+                        if (!hasFullHistory) {
+                          setIsLoadingHistory(true);
+                          await loadFullHistory();
+                          setIsLoadingHistory(false);
+                        }
+                      }
+                      setShowDateFilter(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-xl shadow-md hover:from-amber-400 hover:to-amber-500 transition cursor-pointer disabled:opacity-70"
                   >
-                    Concluir
+                    {isLoadingHistory ? 'Carregando...' : 'Concluir'}
                   </button>
                 </div>
               </div>

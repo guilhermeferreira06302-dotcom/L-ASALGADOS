@@ -60,6 +60,8 @@ interface AppContextType {
   updateShift: (shift: Shift) => Promise<void>;
   syncStatus: 'SYNCED' | 'SYNCING' | 'ERROR';
   lastSyncTime: string | null;
+  hasFullHistory: boolean;
+  loadFullHistory: () => Promise<void>;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -82,9 +84,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [syncStatus, setSyncStatus] = useState<'SYNCED' | 'SYNCING' | 'ERROR'>('SYNCED');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [hasFullHistory, setHasFullHistory] = useState(false);
+
+  const fetchAll = async (table: string, orderBy?: string, dateFilter?: { operator: 'gte' | 'lt', value: string }) => {
+    let allData: any[] = [];
+    let from = 0;
+    const step = 999;
+    while (true) {
+      let query = supabase.from(table).select('*');
+      if (orderBy) {
+        query = query.order(orderBy, { ascending: false });
+      }
+      if (dateFilter) {
+        if (dateFilter.operator === 'gte') query = query.gte('date', dateFilter.value);
+        if (dateFilter.operator === 'lt') query = query.lt('date', dateFilter.value);
+      }
+      const { data, error } = await query.range(from, from + step);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = [...allData, ...data];
+      if (data.length <= step) break;
+      from += step + 1;
+    }
+    return { data: allData };
+  };
+
+  const getThirtyDaysAgoString = () => {
+    const d = new Date(Date.now() - 30 * 86400000);
+    return d.toBRTISOString();
+  };
+
+  const loadFullHistory = async () => {
+    if (hasFullHistory) return;
+    try {
+      setSyncStatus('SYNCING');
+      const thirtyDaysAgo = getThirtyDaysAgoString();
+      const [
+        { data: oldTransactions },
+        { data: oldMovements },
+        { data: oldAudits }
+      ] = await Promise.all([
+        fetchAll('transactions', 'date', { operator: 'lt', value: thirtyDaysAgo }),
+        fetchAll('stock_movements', 'date', { operator: 'lt', value: thirtyDaysAgo }),
+        fetchAll('inventory_audits', 'date', { operator: 'lt', value: thirtyDaysAgo })
+      ]);
+
+      if (oldTransactions && oldTransactions.length > 0) {
+        setTransactions(prev => [...prev, ...oldTransactions]);
+      }
+      if (oldMovements && oldMovements.length > 0) {
+        setStockMovements(prev => [...prev, ...oldMovements]);
+      }
+      if (oldAudits && oldAudits.length > 0) {
+        setAudits(prev => [...prev, ...oldAudits]);
+      }
+
+      setHasFullHistory(true);
+      setSyncStatus('SYNCED');
+    } catch (err) {
+      console.error('Failed to load full history:', err);
+      setSyncStatus('ERROR');
+    }
+  };
 
   // Load from Relational Tables in Cloud
+  // Load from Relational Tables in Cloud
   useEffect(() => {
+
     const loadData = async () => {
       try {
         setSyncStatus('SYNCING');
@@ -102,9 +168,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('custom_categories').select('*'),
           supabase.from('ingredients').select('*'),
           supabase.from('products').select('*'),
-          supabase.from('transactions').select('*'),
-          supabase.from('stock_movements').select('*'),
-          supabase.from('inventory_audits').select('*'),
+          fetchAll('transactions', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
+          fetchAll('stock_movements', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
+          fetchAll('inventory_audits', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
           supabase.from('shifts').select('*')
         ]);
 
@@ -1009,7 +1075,9 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
         cancelShift,
         updateShift,
         syncStatus,
-        lastSyncTime
+        lastSyncTime,
+        hasFullHistory,
+        loadFullHistory
       }}
     >
       {children}

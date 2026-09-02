@@ -7,7 +7,8 @@ import {
 import { StockMovement, StockMovementType } from '../../types';
 
 export const StockMovements: React.FC = () => {
-  const { stockMovements, ingredients, products, editStockMovement, deleteStockMovement } = useApp();
+  const { stockMovements, ingredients, products, editStockMovement, deleteStockMovement, hasFullHistory, loadFullHistory } = useApp();
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | StockMovementType>('ALL');
   const [filterOperator, setFilterOperator] = useState('ALL');
@@ -72,7 +73,7 @@ export const StockMovements: React.FC = () => {
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Date-based Pagination Logic
-  const uniqueDates = Array.from(new Set(filteredMovements.map(m => m.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const uniqueDates = Array.from(new Set<string>(filteredMovements.map(m => m.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   
   if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
     setCurrentPage(1);
@@ -281,7 +282,12 @@ export const StockMovements: React.FC = () => {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!hasFullHistory) {
+                        setIsLoadingHistory(true);
+                        await loadFullHistory();
+                        setIsLoadingHistory(false);
+                      }
                       setDateFilterMode('ALL');
                       setShowDateFilter(false);
                     }}
@@ -291,10 +297,20 @@ export const StockMovements: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowDateFilter(false)}
-                    className="px-4 py-1.5 bg-blue-500 text-white font-extrabold rounded-xl shadow-md hover:bg-blue-600 transition cursor-pointer"
+                    disabled={isLoadingHistory}
+                    onClick={async () => {
+                      if (dateFilterMode === 'ALL' || (dateFilterMode === 'RANGE' && new Date(startDate).getTime() < Date.now() - 29 * 86400000)) {
+                        if (!hasFullHistory) {
+                          setIsLoadingHistory(true);
+                          await loadFullHistory();
+                          setIsLoadingHistory(false);
+                        }
+                      }
+                      setShowDateFilter(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-blue-500 text-white font-extrabold rounded-xl shadow-md hover:bg-blue-600 transition cursor-pointer disabled:opacity-70"
                   >
-                    Concluir
+                    {isLoadingHistory ? 'Carregando...' : 'Concluir'}
                   </button>
                 </div>
               </div>

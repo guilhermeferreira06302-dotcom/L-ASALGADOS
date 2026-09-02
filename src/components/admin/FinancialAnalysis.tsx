@@ -8,7 +8,8 @@ import {
 import { currencyMask, parseCurrency } from '../../utils/masks';
 
 export const FinancialAnalysis: React.FC = () => {
-  const { transactions, addTransaction, deleteTransaction, stockMovements, ingredients, products, settlePendingDebt, convertLoss, convertDebtToLoss, acceptStockRequest } = useApp();
+  const { transactions, addTransaction, deleteTransaction, stockMovements, ingredients, products, settlePendingDebt, convertLoss, convertDebtToLoss, acceptStockRequest, hasFullHistory, loadFullHistory } = useApp();
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [filterType, setFilterType] = useState<string>('TODOS');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -260,7 +261,7 @@ export const FinancialAnalysis: React.FC = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Date-based Pagination Logic
-  const uniqueDates = Array.from(new Set(allDisplayTransactions.map(t => t.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const uniqueDates = Array.from(new Set<string>(allDisplayTransactions.map(t => t.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   
   // Se o total de dias mudar após um filtro, garantir que a página não fique fora do limite
   if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
@@ -553,7 +554,12 @@ export const FinancialAnalysis: React.FC = () => {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!hasFullHistory) {
+                        setIsLoadingHistory(true);
+                        await loadFullHistory();
+                        setIsLoadingHistory(false);
+                      }
                       setDateFilterMode('ALL');
                       setShowDateFilter(false);
                     }}
@@ -563,10 +569,20 @@ export const FinancialAnalysis: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowDateFilter(false)}
-                    className="px-4 py-1.5 bg-emerald-500 text-white font-extrabold rounded-xl shadow-md hover:bg-emerald-600 transition cursor-pointer"
+                    disabled={isLoadingHistory}
+                    onClick={async () => {
+                      if (dateFilterMode === 'ALL' || (dateFilterMode === 'RANGE' && new Date(startDate).getTime() < Date.now() - 29 * 86400000)) {
+                        if (!hasFullHistory) {
+                          setIsLoadingHistory(true);
+                          await loadFullHistory();
+                          setIsLoadingHistory(false);
+                        }
+                      }
+                      setShowDateFilter(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500 text-white font-extrabold rounded-xl shadow-md hover:bg-emerald-600 transition cursor-pointer disabled:opacity-70"
                   >
-                    Concluir
+                    {isLoadingHistory ? 'Carregando...' : 'Concluir'}
                   </button>
                 </div>
               </div>
