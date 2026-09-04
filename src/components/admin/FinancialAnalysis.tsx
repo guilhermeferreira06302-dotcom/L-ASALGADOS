@@ -26,9 +26,11 @@ export const FinancialAnalysis: React.FC = () => {
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
-  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
-  const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('RANGE');
+  const [startDate, setStartDate] = useState<string>(firstDay.toBRTISOString().toBRTDateString());
+  const [endDate, setEndDate] = useState<string>(now.toBRTISOString().toBRTDateString());
   
   const [showModal, setShowModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -310,7 +312,7 @@ export const FinancialAnalysis: React.FC = () => {
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
@@ -341,6 +343,19 @@ export const FinancialAnalysis: React.FC = () => {
               Ver e Editar Entradas
             </button>
           )}
+        </div>
+
+        <div className="p-5 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between shadow-sm">
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-500">Saldo Líquido</span>
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500">
+                {balance >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+              </div>
+            </div>
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-2">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <p className="text-[11px] text-slate-700 mt-1 mb-3">Lucro real (faturamento - custos/perdas)</p>
+          </div>
         </div>
 
         <div className="p-5 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between">

@@ -62,6 +62,7 @@ interface AppContextType {
   lastSyncTime: string | null;
   hasFullHistory: boolean;
   loadFullHistory: () => Promise<void>;
+  sendWhatsAppAlert: (message: string) => Promise<void>;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -85,6 +86,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [syncStatus, setSyncStatus] = useState<'SYNCED' | 'SYNCING' | 'ERROR'>('SYNCED');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [hasFullHistory, setHasFullHistory] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>(null);
+
+  const sendWhatsAppAlert = async (message: string) => {
+    if (!systemSettings || !systemSettings.alerts_enabled || !systemSettings.whatsapp_number || !systemSettings.whatsapp_api_key) {
+      return;
+    }
+    try {
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${systemSettings.whatsapp_number}&text=${encodeURIComponent(message)}&apikey=${systemSettings.whatsapp_api_key}`;
+      await fetch(url, { method: 'GET', mode: 'no-cors' });
+      console.log('WhatsApp alert sent.');
+    } catch (err) {
+      console.error('Failed to send WhatsApp alert:', err);
+    }
+  };
 
   const fetchAll = async (table: string, orderBy?: string, dateFilter?: { operator: 'gte' | 'lt', value: string }) => {
     let allData: any[] = [];
@@ -96,8 +111,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         query = query.order(orderBy, { ascending: false });
       }
       if (dateFilter) {
-        if (dateFilter.operator === 'gte') query = query.gte('date', dateFilter.value);
-        if (dateFilter.operator === 'lt') query = query.lt('date', dateFilter.value);
+        if (dateFilter.operator === 'gte') query = query.gte(orderBy!, dateFilter.value);
+        if (dateFilter.operator === 'lt') query = query.lt(orderBy!, dateFilter.value);
+      } else if (orderBy) {
+        query = query.gte(orderBy, getStartOfMonthString()); // Default fallback
       }
       const { data, error } = await query.range(from, from + step);
       if (error) throw error;
@@ -109,24 +126,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { data: allData };
   };
 
-  const getThirtyDaysAgoString = () => {
-    const d = new Date(Date.now() - 30 * 86400000);
-    return d.toBRTISOString();
+  const getStartOfMonthString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    // Using BRT timezone logic since the rest of the app relies on it
+    return `${year}-${month}-01T00:00:00.000-03:00`;
   };
 
   const loadFullHistory = async () => {
     if (hasFullHistory) return;
     try {
       setSyncStatus('SYNCING');
-      const thirtyDaysAgo = getThirtyDaysAgoString();
+      const startOfMonth = getStartOfMonthString();
       const [
         { data: oldTransactions },
         { data: oldMovements },
         { data: oldAudits }
       ] = await Promise.all([
-        fetchAll('transactions', 'date', { operator: 'lt', value: thirtyDaysAgo }),
-        fetchAll('stock_movements', 'date', { operator: 'lt', value: thirtyDaysAgo }),
-        fetchAll('inventory_audits', 'date', { operator: 'lt', value: thirtyDaysAgo })
+        fetchAll('transactions', 'date', { operator: 'lt', value: startOfMonth }),
+        fetchAll('stock_movements', 'date', { operator: 'lt', value: startOfMonth }),
+        fetchAll('inventory_audits', 'date', { operator: 'lt', value: startOfMonth })
       ]);
 
       if (oldTransactions && oldTransactions.length > 0) {
@@ -168,9 +188,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('custom_categories').select('*'),
           supabase.from('ingredients').select('*'),
           supabase.from('products').select('*'),
-          fetchAll('transactions', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
-          fetchAll('stock_movements', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
-          fetchAll('inventory_audits', 'date', { operator: 'gte', value: getThirtyDaysAgoString() }),
+          fetchAll('transactions', 'date', { operator: 'gte', value: getStartOfMonthString() }),
+          fetchAll('stock_movements', 'date', { operator: 'gte', value: getStartOfMonthString() }),
+          fetchAll('inventory_audits', 'date', { operator: 'gte', value: getStartOfMonthString() }),
           supabase.from('shifts').select('*')
         ]);
 
@@ -187,6 +207,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (open) setCurrentShift(open);
         }
         
+        // Settings query can fail if no row exists (PGRST116), so we handle it from the Promise array result
+        // Wait, destructuring above for settings... let's just do it sequentially or use a helper
+        const settingsRes = await supabase.from('system_settings').select('*').limit(1).maybeSingle();
+        if (settingsRes.data) {
+          setSystemSettings(settingsRes.data);
+        }
+
         setSyncStatus('SYNCED');
         setLastSyncTime(new Date().toLocaleTimeString());
       } catch (err) {
@@ -275,7 +302,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Monitor de Inatividade
+  const latestShiftRef = React.useRef<Shift | null>(null);
+  const latestMovementsRef = React.useRef<StockMovement[]>([]);
+  const latestTransactionsRef = React.useRef<FinancialTransaction[]>([]);
+  const latestSettingsRef = React.useRef<any>(null);
 
+  useEffect(() => {
+    latestShiftRef.current = currentShift;
+    latestMovementsRef.current = stockMovements;
+    latestTransactionsRef.current = transactions;
+    latestSettingsRef.current = systemSettings;
+  }, [currentShift, stockMovements, transactions, systemSettings]);
+
+  useEffect(() => {
+    // Monitor de inatividade: roda a cada 15 minutos
+    const interval = setInterval(() => {
+      const settings = latestSettingsRef.current;
+      const shift = latestShiftRef.current;
+      
+      if (!settings || !settings.alerts_enabled || !shift) return;
+      
+      const timeoutMinutes = settings.inactivity_timeout_minutes || 120;
+      const now = new Date();
+      
+      let lastActivityDate: Date | null = new Date(shift.openedAt);
+
+      // Procurar movimentação mais recente do turno
+      const shiftMovements = latestMovementsRef.current.filter(m => m.date >= shift.openedAt);
+      const shiftTransactions = latestTransactionsRef.current.filter(t => t.date >= shift.openedAt);
+
+      shiftMovements.forEach(m => {
+        const mDate = new Date(m.date);
+        if (!lastActivityDate || mDate > lastActivityDate) {
+          lastActivityDate = mDate;
+        }
+      });
+
+      shiftTransactions.forEach(t => {
+        const tDate = new Date(t.date);
+        if (!lastActivityDate || tDate > lastActivityDate) {
+          lastActivityDate = tDate;
+        }
+      });
+
+      if (lastActivityDate) {
+        const diffMinutes = Math.floor((now.getTime() - lastActivityDate.getTime()) / (1000 * 60));
+        if (diffMinutes >= timeoutMinutes) {
+          const message = `⚠️ *ALERTA DE INATIVIDADE*\nO turno aberto por *${shift.openedBy}* está sem nenhuma venda/movimentação há *${diffMinutes} minutos*.\nPor favor, verifique se as vendas estão sendo registradas no sistema.\n\nHorário atual: ${now.toLocaleTimeString('pt-BR')}`;
+          // Avoid spamming (this would send every 15 min if still inactive). We could add a local storage flag to only send once per shift, but for MVP, this will remind them until they do something.
+          const lastAlertTime = localStorage.getItem(`sabor_gestao_lastInactivityAlert_${shift.id}`);
+          if (!lastAlertTime || (now.getTime() - new Date(lastAlertTime).getTime() > timeoutMinutes * 60 * 1000)) {
+            sendWhatsAppAlert(message);
+            localStorage.setItem(`sabor_gestao_lastInactivityAlert_${shift.id}`, now.toISOString());
+          }
+        }
+      }
+    }, 15 * 60 * 1000); // 15 minutos
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Cruzamento estrito: A aba de Estoque (ingredients) deve conter APENAS o que está cadastrado na aba de Produtos
   useEffect(() => {
@@ -508,6 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorIng } = await supabase.from('ingredients').upsert(dbIng);
     if (errorIng) {
       console.error('Erro ao atualizar estoque do insumo:', errorIng);
+      sendWhatsAppAlert(`🚨 *ERRO AO SALVAR ESTOQUE*\nFalha de conexão com o banco de dados ao tentar ajustar o estoque de "${updatedIng.name}".\nO sistema pode ficar inconsistente. Por favor, verifique.`);
       alert('Erro ao atualizar estoque no banco: ' + errorIng.message);
       throw errorIng;
     }
@@ -552,6 +639,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorMov } = await supabase.from('stock_movements').insert(movement);
     if (errorMov) {
       console.error('Erro ao registrar movimentação:', errorMov);
+      sendWhatsAppAlert(`🚨 *ERRO DE BANCO DE DADOS*\nFalha ao gravar a movimentação de estoque para "${targetIng.name}".\nA venda pode não ter sido registrada corretamente.`);
       alert('Erro ao salvar movimentação no banco: ' + errorMov.message);
       throw errorMov;
     }
@@ -722,6 +810,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from('transactions').insert(newTx);
     if (error) {
       console.error('Erro ao adicionar transação:', error);
+      sendWhatsAppAlert(`🚨 *ERRO FINANCEIRO*\nOcorreu um erro ao salvar a transação financeira de R$ ${newTx.amount.toFixed(2)}.\nVerifique a conexão.`);
       alert('Erro ao salvar transação no banco: ' + error.message);
       throw error;
     }

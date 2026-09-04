@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   Shield, ChefHat, LayoutDashboard, DollarSign, Package, Utensils,
   Bell, AlertTriangle, CheckCircle2, RotateCcw, LogOut, X,
-  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet, TrendingUp, Lock, Cloud, CloudOff, RefreshCw
+  ChevronUp, ChevronDown, Plus, Minus, ArrowDownRight, ArrowUpRight, Calendar, Clock, Tag, Wallet, TrendingUp, Lock, Cloud, CloudOff, RefreshCw, Settings
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { quantityMask, parseQuantity } from '../utils/masks';
@@ -242,6 +242,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex items-center gap-3">
                   <Lock className={`w-4 h-4 ${adminTab === 'ACESSOS' ? 'text-red-500' : 'text-slate-700'}`} />
                   <span>Acessos</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleTabClick('CONFIGURACOES')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  adminTab === 'CONFIGURACOES'
+                    ? 'bg-gradient-to-r from-slate-500/15 to-slate-500/5 text-slate-900 border-l-4 border-slate-900 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className={`w-4 h-4 ${adminTab === 'CONFIGURACOES' ? 'text-slate-900' : 'text-slate-700'}`} />
+                  <span>Configurações</span>
                 </div>
               </button>
             </div>

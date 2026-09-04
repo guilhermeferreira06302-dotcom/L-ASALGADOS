@@ -17,9 +17,11 @@ export const StockMovements: React.FC = () => {
 
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
-  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 7 * 86400000).toBRTISOString().toBRTDateString());
-  const [endDate, setEndDate] = useState<string>(new Date().toBRTISOString().toBRTDateString());
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('RANGE');
+  const [startDate, setStartDate] = useState<string>(firstDay.toBRTISOString().toBRTDateString());
+  const [endDate, setEndDate] = useState<string>(now.toBRTISOString().toBRTDateString());
 
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);

@@ -71,7 +71,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   const monthlyUniqueOrders = new Set<string>();
 
   stockMovements.forEach(movement => {
-    if (movement.date >= thirtyDaysAgoFullISO && movement.type === 'SAIDA') {
+    if (movement.date.toBRTDateString() >= startOfMonthStr && movement.type === 'SAIDA') {
       if (movement.ingredientId.startsWith('ing-prod-')) {
         monthlyProductOutflowQuantity += movement.quantity;
         
@@ -132,7 +132,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
   const weeklySalesCount: Record<string, number> = {};
   
   stockMovements.forEach(movement => {
-    if (movement.date >= sevenDaysAgoFullISO && movement.type === 'SAIDA') {
+    if (movement.date.toBRTDateString() >= startOfMonthStr && movement.type === 'SAIDA') {
       // Considera todas as saídas de produtos como venda ou saída para calcular os campeões
       if (movement.ingredientId.startsWith('ing-prod-')) {
         const productId = movement.ingredientId.replace('ing-prod-', '');
@@ -157,7 +157,7 @@ export const AdminDashboard: React.FC<{ onNavigateTab: (tab: string) => void }> 
         <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-xl flex items-start justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap truncate">Saldo Líquido</p>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {totalInflow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">R$ {monthlyNetProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
             <span className={`inline-flex items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full ${monthlyNetProfit >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
               {monthlyNetProfit >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
               Saldo Líquido do mês vigente

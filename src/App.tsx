@@ -10,7 +10,9 @@ import { StockMovements } from './components/admin/StockMovements';
 import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { ShiftManagement } from './components/admin/ShiftManagement';
 import { AccessManagement } from './components/admin/AccessManagement';
+import { SystemSettings } from './components/admin/SystemSettings';
 import { EmployeePortal } from './components/employee/EmployeePortal';
+import { GlobalErrorBoundary } from './components/ErrorBoundary';
 import { Lock, Menu } from 'lucide-react';
 
 const MainContent: React.FC = () => {
@@ -81,6 +83,7 @@ const MainContent: React.FC = () => {
       case 'MOVIMENTACAO': return 'Histórico de Movimentações';
       case 'PRODUTOS': return 'Gestão de Cardápio & Insumos por Produto';
       case 'SHIFT': return 'Gestão de Turno / Caixa';
+      case 'CONFIGURACOES': return 'Configurações do Sistema';
       default: return 'Painel Administrativo';
     }
   };
@@ -146,6 +149,7 @@ const MainContent: React.FC = () => {
               {adminTab === 'PRODUTOS' && <ProductManagement />}
               {adminTab === 'ACESSOS' && <AccessManagement />}
               {adminTab === 'SHIFT' && <ShiftManagement isAdminView />}
+              {adminTab === 'CONFIGURACOES' && <SystemSettings />}
             </div>
           ) : isEmployeeLocked ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300 h-full min-h-[60vh]">
@@ -201,7 +205,9 @@ const MainContent: React.FC = () => {
 export default function App() {
   return (
     <AppProvider>
-      <MainContent />
+      <GlobalErrorBoundary>
+        <MainContent />
+      </GlobalErrorBoundary>
     </AppProvider>
   );
 }
