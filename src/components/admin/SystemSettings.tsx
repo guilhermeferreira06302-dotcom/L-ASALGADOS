@@ -79,9 +79,14 @@ export const SystemSettings: React.FC = () => {
     }
   };
 
-  const testAlert = () => {
-    sendTelegramAlert(`Teste de Notificação Sabor & Gestão!\nSe você recebeu esta mensagem, as configurações estão corretas.\nHorário: ${new Date().toLocaleString('pt-BR')}`);
-    alert('Tentativa de envio iniciada. Verifique seu Telegram.');
+  const testAlert = async () => {
+    alert('Tentativa de envio iniciada. Aguarde...');
+    const result = await sendTelegramAlert(`Teste de Notificação Sabor & Gestão!\nSe você recebeu esta mensagem, as configurações estão corretas.\nHorário: ${new Date().toLocaleString('pt-BR')}`);
+    if (result && !result.success) {
+      alert(`⚠️ Falha ao enviar:\n\n${result.error}\n\nVerifique se o Token e ID estão corretos e se você mandou "Oi" para o seu robô!`);
+    } else {
+      alert('✅ Mensagem de teste enviada com sucesso! Verifique seu Telegram.');
+    }
   };
 
   return (

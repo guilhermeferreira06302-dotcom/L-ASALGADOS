@@ -62,7 +62,7 @@ interface AppContextType {
   lastSyncTime: string | null;
   hasFullHistory: boolean;
   loadFullHistory: () => Promise<void>;
-  sendTelegramAlert: (message: string) => Promise<void>;
+  sendTelegramAlert: (message: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -90,24 +90,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const sendTelegramAlert = async (message: string) => {
     if (!systemSettings || !systemSettings.alerts_enabled || !systemSettings.telegram_bot_token || !systemSettings.telegram_chat_id) {
-      return;
+      return { success: false, error: 'Configurações de alerta ausentes ou desativadas no sistema.' };
     }
     try {
-      const url = `https://api.telegram.org/bot${systemSettings.telegram_bot_token}/sendMessage`;
-      await fetch(url, {
+      const url = `https://api.telegram.org/bot${systemSettings.telegram_bot_token.trim()}/sendMessage`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chat_id: systemSettings.telegram_chat_id,
+          chat_id: systemSettings.telegram_chat_id.trim(),
           text: message,
           parse_mode: 'Markdown'
         })
       });
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(data.description || 'Erro desconhecido do Telegram');
+      }
       console.log('Telegram alert sent.');
-    } catch (err) {
+      return { success: true };
+    } catch (err: any) {
       console.error('Failed to send Telegram alert:', err);
+      return { success: false, error: err.message || String(err) };
     }
   };
 
