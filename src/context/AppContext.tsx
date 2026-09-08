@@ -281,6 +281,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (data) setCustomCategories(data.map((c: any) => c.name));
             });
             break;
+          case 'system_settings':
+            if (eventType === 'INSERT' || eventType === 'UPDATE') {
+              setSystemSettings(newRec);
+            }
+            break;
           case 'shifts':
             if (eventType === 'INSERT' || eventType === 'UPDATE') {
               if (newRec.status === 'OPEN') {
