@@ -37,7 +37,7 @@ class ErrorBoundaryInner extends Component<Props & { sendTelegramAlert: (msg: st
     // Tenta enviar o alerta
     try {
       this.props.sendTelegramAlert(
-        `🚨 *ALERTA CRÍTICO - SISTEMA CAIU* 🚨\nOcorreu um erro fatal na interface (Tela Branca).\n\nErro: ${error.message}\nVerifique o sistema imediatamente.`
+        `🚨 <b>ALERTA CRÍTICO - SISTEMA CAIU</b> 🚨\nOcorreu um erro fatal na interface (Tela Branca).\n\nErro: ${error.message}\nVerifique o sistema imediatamente.`
       );
     } catch (e) {
       console.error('Falha ao enviar alerta de error boundary', e);

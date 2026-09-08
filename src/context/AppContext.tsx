@@ -102,7 +102,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           chat_id: systemSettings.telegram_chat_id.trim(),
           text: message,
-          parse_mode: 'Markdown'
+          parse_mode: 'HTML'
         })
       });
       const data = await res.json();
@@ -615,7 +615,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorIng } = await supabase.from('ingredients').upsert(dbIng);
     if (errorIng) {
       console.error('Erro ao atualizar estoque do insumo:', errorIng);
-      sendTelegramAlert(`🚨 *ERRO AO SALVAR ESTOQUE*\nFalha de conexão com o banco de dados ao tentar ajustar o estoque de "${updatedIng.name}".\nO sistema pode ficar inconsistente. Por favor, verifique.`);
+      sendTelegramAlert(`🚨 <b>ERRO AO SALVAR ESTOQUE</b>\nFalha de conexão com o banco de dados ao tentar ajustar o estoque de "${updatedIng.name}".\nO sistema pode ficar inconsistente. Por favor, verifique.`);
       alert('Erro ao atualizar estoque no banco: ' + errorIng.message);
       throw errorIng;
     }
@@ -660,7 +660,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorMov } = await supabase.from('stock_movements').insert(movement);
     if (errorMov) {
       console.error('Erro ao registrar movimentação:', errorMov);
-      sendTelegramAlert(`🚨 *ERRO DE BANCO DE DADOS*\nFalha ao gravar a movimentação de estoque para "${targetIng.name}".\nA venda pode não ter sido registrada corretamente.`);
+      sendTelegramAlert(`🚨 <b>ERRO DE BANCO DE DADOS</b>\nFalha ao gravar a movimentação de estoque para "${targetIng.name}".\nA venda pode não ter sido registrada corretamente.`);
       alert('Erro ao salvar movimentação no banco: ' + errorMov.message);
       throw errorMov;
     }
@@ -831,7 +831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from('transactions').insert(newTx);
     if (error) {
       console.error('Erro ao adicionar transação:', error);
-      sendTelegramAlert(`🚨 *ERRO FINANCEIRO*\nOcorreu um erro ao salvar a transação financeira de R$ ${newTx.amount.toFixed(2)}.\nVerifique a conexão.`);
+      sendTelegramAlert(`🚨 <b>ERRO FINANCEIRO</b>\nOcorreu um erro ao salvar a transação financeira de R$ ${newTx.amount.toFixed(2)}.\nVerifique a conexão.`);
       alert('Erro ao salvar transação no banco: ' + error.message);
       throw error;
     }
