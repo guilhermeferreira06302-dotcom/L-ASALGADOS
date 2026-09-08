@@ -62,7 +62,7 @@ interface AppContextType {
   lastSyncTime: string | null;
   hasFullHistory: boolean;
   loadFullHistory: () => Promise<void>;
-  sendWhatsAppAlert: (message: string) => Promise<void>;
+  sendTelegramAlert: (message: string) => Promise<void>;
 }
 
 const STORAGE_KEY = 'sabor_gestao_data_v3';
@@ -88,16 +88,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [hasFullHistory, setHasFullHistory] = useState(false);
   const [systemSettings, setSystemSettings] = useState<any>(null);
 
-  const sendWhatsAppAlert = async (message: string) => {
-    if (!systemSettings || !systemSettings.alerts_enabled || !systemSettings.whatsapp_number || !systemSettings.whatsapp_api_key) {
+  const sendTelegramAlert = async (message: string) => {
+    if (!systemSettings || !systemSettings.alerts_enabled || !systemSettings.telegram_bot_token || !systemSettings.telegram_chat_id) {
       return;
     }
     try {
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${systemSettings.whatsapp_number}&text=${encodeURIComponent(message)}&apikey=${systemSettings.whatsapp_api_key}`;
-      await fetch(url, { method: 'GET', mode: 'no-cors' });
-      console.log('WhatsApp alert sent.');
+      const url = `https://api.telegram.org/bot${systemSettings.telegram_bot_token}/sendMessage`;
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: systemSettings.telegram_chat_id,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+      console.log('Telegram alert sent.');
     } catch (err) {
-      console.error('Failed to send WhatsApp alert:', err);
+      console.error('Failed to send Telegram alert:', err);
     }
   };
 
@@ -353,7 +363,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Avoid spamming (this would send every 15 min if still inactive). We could add a local storage flag to only send once per shift, but for MVP, this will remind them until they do something.
           const lastAlertTime = localStorage.getItem(`sabor_gestao_lastInactivityAlert_${shift.id}`);
           if (!lastAlertTime || (now.getTime() - new Date(lastAlertTime).getTime() > timeoutMinutes * 60 * 1000)) {
-            sendWhatsAppAlert(message);
+            sendTelegramAlert(message);
             localStorage.setItem(`sabor_gestao_lastInactivityAlert_${shift.id}`, now.toISOString());
           }
         }
@@ -594,7 +604,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorIng } = await supabase.from('ingredients').upsert(dbIng);
     if (errorIng) {
       console.error('Erro ao atualizar estoque do insumo:', errorIng);
-      sendWhatsAppAlert(`🚨 *ERRO AO SALVAR ESTOQUE*\nFalha de conexão com o banco de dados ao tentar ajustar o estoque de "${updatedIng.name}".\nO sistema pode ficar inconsistente. Por favor, verifique.`);
+      sendTelegramAlert(`🚨 *ERRO AO SALVAR ESTOQUE*\nFalha de conexão com o banco de dados ao tentar ajustar o estoque de "${updatedIng.name}".\nO sistema pode ficar inconsistente. Por favor, verifique.`);
       alert('Erro ao atualizar estoque no banco: ' + errorIng.message);
       throw errorIng;
     }
@@ -639,7 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error: errorMov } = await supabase.from('stock_movements').insert(movement);
     if (errorMov) {
       console.error('Erro ao registrar movimentação:', errorMov);
-      sendWhatsAppAlert(`🚨 *ERRO DE BANCO DE DADOS*\nFalha ao gravar a movimentação de estoque para "${targetIng.name}".\nA venda pode não ter sido registrada corretamente.`);
+      sendTelegramAlert(`🚨 *ERRO DE BANCO DE DADOS*\nFalha ao gravar a movimentação de estoque para "${targetIng.name}".\nA venda pode não ter sido registrada corretamente.`);
       alert('Erro ao salvar movimentação no banco: ' + errorMov.message);
       throw errorMov;
     }
@@ -810,7 +820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from('transactions').insert(newTx);
     if (error) {
       console.error('Erro ao adicionar transação:', error);
-      sendWhatsAppAlert(`🚨 *ERRO FINANCEIRO*\nOcorreu um erro ao salvar a transação financeira de R$ ${newTx.amount.toFixed(2)}.\nVerifique a conexão.`);
+      sendTelegramAlert(`🚨 *ERRO FINANCEIRO*\nOcorreu um erro ao salvar a transação financeira de R$ ${newTx.amount.toFixed(2)}.\nVerifique a conexão.`);
       alert('Erro ao salvar transação no banco: ' + error.message);
       throw error;
     }

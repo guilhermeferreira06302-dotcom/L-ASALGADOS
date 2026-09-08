@@ -3,10 +3,10 @@ import { supabase } from '../../lib/supabase';
 import { useApp } from '../../context/AppContext';
 
 export const SystemSettings: React.FC = () => {
-  const { sendWhatsAppAlert } = useApp();
+  const { sendTelegramAlert } = useApp();
   
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [botToken, setBotToken] = useState('');
+  const [chatId, setChatId] = useState('');
   const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [inactivityTimeout, setInactivityTimeout] = useState(120); // minutes
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +32,8 @@ export const SystemSettings: React.FC = () => {
 
       if (data) {
         setSettingsId(data.id);
-        setWhatsappNumber(data.whatsapp_number || '');
-        setApiKey(data.whatsapp_api_key || '');
+        setBotToken(data.telegram_bot_token || '');
+        setChatId(data.telegram_chat_id || '');
         setAlertsEnabled(data.alerts_enabled || false);
         setInactivityTimeout(data.inactivity_timeout_minutes || 120);
       }
@@ -48,8 +48,8 @@ export const SystemSettings: React.FC = () => {
     setIsSaving(true);
     try {
       const payload = {
-        whatsapp_number: whatsappNumber,
-        whatsapp_api_key: apiKey,
+        telegram_bot_token: botToken,
+        telegram_chat_id: chatId,
         alerts_enabled: alertsEnabled,
         inactivity_timeout_minutes: inactivityTimeout
       };
@@ -80,8 +80,8 @@ export const SystemSettings: React.FC = () => {
   };
 
   const testAlert = () => {
-    sendWhatsAppAlert(`Teste de Notificação Sabor & Gestão!\nSe você recebeu esta mensagem, as configurações estão corretas.\nHorário: ${new Date().toLocaleString('pt-BR')}`);
-    alert('Tentativa de envio iniciada. Verifique seu WhatsApp.');
+    sendTelegramAlert(`Teste de Notificação Sabor & Gestão!\nSe você recebeu esta mensagem, as configurações estão corretas.\nHorário: ${new Date().toLocaleString('pt-BR')}`);
+    alert('Tentativa de envio iniciada. Verifique seu Telegram.');
   };
 
   return (
@@ -96,17 +96,17 @@ export const SystemSettings: React.FC = () => {
       </div>
 
       <div className="bg-slate-900/50 p-6 rounded-lg border border-slate-700/50">
-        <h3 className="text-lg font-semibold text-emerald-400 mb-4 flex items-center gap-2">
-          📱 Alertas no WhatsApp (via CallMeBot)
+        <h3 className="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
+          📱 Alertas no Telegram (Oficial)
         </h3>
 
-        <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded-lg mb-6">
-          <h4 className="text-amber-500 font-semibold mb-2">Instruções para ativar:</h4>
-          <ol className="list-decimal list-inside text-sm text-amber-200/80 space-y-1">
-            <li>Adicione o número do bot na sua agenda. (Ex: +34 695 71 15 19 - verifique o site oficial do CallMeBot para o número atual).</li>
-            <li>Mande uma mensagem no WhatsApp para este número com o texto: <code className="bg-slate-800 px-1 rounded">I allow callmebot to send me messages</code></li>
-            <li>O bot responderá com a sua <strong>API Key</strong>.</li>
-            <li>Preencha seu número (com código do país, sem o +) e a API Key abaixo.</li>
+        <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-lg mb-6">
+          <h4 className="text-blue-400 font-semibold mb-2">Instruções para ativar:</h4>
+          <ol className="list-decimal list-inside text-sm text-blue-200/80 space-y-1">
+            <li>Abra o Telegram e busque por <strong>@BotFather</strong> (com selo de verificado).</li>
+            <li>Envie o comando <code className="bg-slate-800 px-1 rounded">/newbot</code> e siga as instruções para criar o seu bot. Ele te dará um <strong>Bot Token</strong>.</li>
+            <li>Busque por <strong>@userinfobot</strong> no Telegram e dê Start para pegar o seu <strong>Chat ID</strong>.</li>
+            <li>Preencha o Token do Bot e seu Chat ID nos campos abaixo.</li>
           </ol>
         </div>
 
@@ -120,38 +120,38 @@ export const SystemSettings: React.FC = () => {
                 id="enableAlerts"
                 checked={alertsEnabled}
                 onChange={(e) => setAlertsEnabled(e.target.checked)}
-                className="w-5 h-5 accent-emerald-500 rounded bg-slate-800 border-slate-600 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                className="w-5 h-5 accent-blue-500 rounded bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-slate-900"
               />
               <label htmlFor="enableAlerts" className="text-slate-200 font-medium">
-                Ativar envio de Alertas no WhatsApp (Erros e Inatividade)
+                Ativar envio de Alertas no Telegram (Erros e Inatividade)
               </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Seu Número de WhatsApp (Ex: 5511999999999)
+                  Bot Token (Fornecido pelo @BotFather)
                 </label>
                 <input
                   type="text"
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Apenas números, com DDI"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                  placeholder="Ex: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                   disabled={!alertsEnabled}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Chave de API (CallMeBot)
+                  Seu Chat ID (Fornecido pelo @userinfobot)
                 </label>
                 <input
                   type="text"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Sua API Key"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all"
+                  value={chatId}
+                  onChange={(e) => setChatId(e.target.value)}
+                  placeholder="Ex: 123456789"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                   disabled={!alertsEnabled}
                 />
               </div>
@@ -176,14 +176,14 @@ export const SystemSettings: React.FC = () => {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg hover:shadow-blue-500/20 transition-all disabled:opacity-50"
               >
                 {isSaving ? 'Salvando...' : 'Salvar Configurações'}
               </button>
 
               <button
                 onClick={testAlert}
-                disabled={!alertsEnabled || !whatsappNumber || !apiKey}
+                disabled={!alertsEnabled || !botToken || !chatId}
                 className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 px-6 rounded-lg shadow-lg transition-all disabled:opacity-50"
               >
                 Enviar Mensagem de Teste

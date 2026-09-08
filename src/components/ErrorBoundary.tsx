@@ -12,16 +12,16 @@ interface State {
 
 // Wrapper para usar o hook dentro do ErrorBoundary de classe
 export const GlobalErrorBoundary: React.FC<Props> = ({ children }) => {
-  const { sendWhatsAppAlert } = useApp();
+  const { sendTelegramAlert } = useApp();
 
   return (
-    <ErrorBoundaryInner sendWhatsAppAlert={sendWhatsAppAlert}>
+    <ErrorBoundaryInner sendTelegramAlert={sendTelegramAlert}>
       {children}
     </ErrorBoundaryInner>
   );
 };
 
-class ErrorBoundaryInner extends Component<Props & { sendWhatsAppAlert: (msg: string) => void }, State> {
+class ErrorBoundaryInner extends Component<Props & { sendTelegramAlert: (msg: string) => void }, State> {
   public state: State = {
     hasError: false,
     error: null
@@ -36,7 +36,7 @@ class ErrorBoundaryInner extends Component<Props & { sendWhatsAppAlert: (msg: st
     
     // Tenta enviar o alerta
     try {
-      this.props.sendWhatsAppAlert(
+      this.props.sendTelegramAlert(
         `🚨 *ALERTA CRÍTICO - SISTEMA CAIU* 🚨\nOcorreu um erro fatal na interface (Tela Branca).\n\nErro: ${error.message}\nVerifique o sistema imediatamente.`
       );
     } catch (e) {
