@@ -15,11 +15,19 @@ export const StockInventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCat, setFilterCat] = useState<string>('ALL');
 
+  const getCurrentBRTHour = () => {
+    const d = new Date();
+    const brt = new Date(d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return brt.getHours();
+  };
+  const currentHour = getCurrentBRTHour();
+  const isOperatingHours = currentHour >= 3 && currentHour < 23;
+
   // Date filter states
   const [showDateFilter, setShowDateFilter] = useState(false);
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('RANGE');
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
   const [startDate, setStartDate] = useState<string>(firstDay.toBRTISOString().toBRTDateString());
   const [endDate, setEndDate] = useState<string>(now.toBRTISOString().toBRTDateString());
 
@@ -376,13 +384,27 @@ export const StockInventory: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 whitespace-nowrap hidden sm:flex">
-             <div className="flex flex-col">
-               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Valor do Estoque Exibido</span>
-               <span className="text-sm font-extrabold text-emerald-950">
-                 R$ {totalFilteredStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-               </span>
-             </div>
+          <div className="flex items-center gap-3 hidden sm:flex">
+            <button
+              type="button"
+              onClick={() => {
+                if (isOperatingHours) handleStartAudit();
+              }}
+              disabled={!isOperatingHours}
+              title={!isOperatingHours ? "Auditoria disponível apenas entre 03:00 e 23:00" : "Realizar conferência física do estoque"}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-md transition ${!isOperatingHours ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'}`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              <span>Auditar</span>
+            </button>
+            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 whitespace-nowrap">
+               <div className="flex flex-col">
+                 <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Valor do Estoque Exibido</span>
+                 <span className="text-sm font-extrabold text-emerald-950">
+                   R$ {totalFilteredStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                 </span>
+               </div>
+            </div>
           </div>
         </div>
 
@@ -469,13 +491,6 @@ export const StockInventory: React.FC = () => {
                     <tr key={ing.id} className="hover:bg-slate-100/40 transition">
                       <td className="py-3.5 px-5">
                         <div className="font-bold text-slate-900 flex items-center gap-3">
-                          {matchedProd && matchedProd.image && matchedProd.image !== 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' ? (
-                            <img src={matchedProd.image} alt={ing.name} className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-200" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
-                               <Package className="w-5 h-5" />
-                            </div>
-                          )}
                           <span className="text-[15px]">{ing.name}</span>
                         </div>
                       </td>

@@ -28,7 +28,7 @@ export const FinancialAnalysis: React.FC = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('RANGE');
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
   const [startDate, setStartDate] = useState<string>(firstDay.toBRTISOString().toBRTDateString());
   const [endDate, setEndDate] = useState<string>(now.toBRTISOString().toBRTDateString());
   
@@ -418,7 +418,7 @@ export const FinancialAnalysis: React.FC = () => {
           </div>
 
 
-          <div className="relative min-w-[190px]">
+          <div className="relative w-full sm:w-auto sm:min-w-[190px]">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Filter className="w-4 h-4 text-slate-500" />
             </div>

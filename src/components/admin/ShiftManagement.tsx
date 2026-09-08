@@ -20,12 +20,22 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
   const [cardCashStr, setCardCashStr] = useState('');
   const [notes, setNotes] = useState('');
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showOpenModal, setShowOpenModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const getCurrentBRTHour = () => {
+    const d = new Date();
+    const brt = new Date(d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return brt.getHours();
+  };
+  const currentHour = getCurrentBRTHour();
+  const isOperatingHours = currentHour >= 3 && currentHour < 23;
 
   const handleOpen = (e: React.FormEvent) => {
     e.preventDefault();
     if (!initialCashStr || !operator) return;
     openShift(parseCurrency(initialCashStr), operator);
+    setShowOpenModal(false);
   };
 
   const handleClose = (e: React.FormEvent) => {
@@ -70,9 +80,24 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
     return (
       <>
         <div className={`w-full max-w-full bg-white p-6 rounded-3xl border border-slate-200 shadow-xl ${!isAdminView ? 'mt-12' : ''}`}>
-          <div className="flex items-center gap-2 mb-6">
-            <Clock className="w-5 h-5 text-emerald-500" />
-            <h3 className="font-extrabold text-lg text-slate-900">Histórico de Turnos (Jornadas)</h3>
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-emerald-500" />
+              <h3 className="font-extrabold text-lg text-slate-900">Histórico de Turnos (Jornadas)</h3>
+            </div>
+            {!currentShift && (
+              <button
+                onClick={() => {
+                  if (isOperatingHours) setShowOpenModal(true);
+                }}
+                disabled={!isOperatingHours}
+                title={!isOperatingHours ? "Abertura disponível apenas entre 03:00 e 23:00" : ""}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-md transition ${!isOperatingHours ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white cursor-pointer'}`}
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Abrir Turno</span>
+              </button>
+            )}
           </div>
           
           <div className="overflow-x-auto">
@@ -134,6 +159,14 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                       ---
                     </td>
                     <td className="py-3 px-4 text-right flex justify-end gap-1">
+                      <button 
+                        onClick={() => setShowCloseModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-lg shadow-sm transition mr-2"
+                        title="Encerrar este turno"
+                      >
+                        <Square className="w-3 h-3 fill-current" />
+                        Encerrar
+                      </button>
                       <button 
                         onClick={() => { setEditingShift(currentShift); setEditData(currentShift); }}
                         className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
@@ -523,6 +556,75 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Abertura de Turno */}
+      {showOpenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-emerald-50">
+              <h2 className="font-extrabold text-emerald-900 flex items-center gap-2">
+                <Play className="w-5 h-5 fill-current" />
+                Abertura de Turno
+              </h2>
+              <button onClick={() => setShowOpenModal(false)} className="text-emerald-400 hover:text-emerald-600 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleOpen} className="p-6 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Fundo de Caixa Inicial (Troco)
+                </label>
+                <div className="relative">
+                  <DollarSign className="w-5 h-5 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="R$ 0,00"
+                    value={initialCashStr}
+                    onChange={(e) => setInitialCashStr(currencyMask(e.target.value))}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Operador Responsável
+                </label>
+                <div className="relative">
+                  <UserIcon className="w-5 h-5 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome do operador"
+                    value={operator}
+                    onChange={(e) => setOperator(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowOpenModal(false)}
+                  className="flex-1 py-3 text-slate-600 font-bold bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-extrabold text-sm shadow-md transition cursor-pointer"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  Abrir Turno
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

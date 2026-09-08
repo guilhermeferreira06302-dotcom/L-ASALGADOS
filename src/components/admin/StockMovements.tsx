@@ -19,7 +19,7 @@ export const StockMovements: React.FC = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('RANGE');
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'RANGE'>('ALL');
   const [startDate, setStartDate] = useState<string>(firstDay.toBRTISOString().toBRTDateString());
   const [endDate, setEndDate] = useState<string>(now.toBRTISOString().toBRTDateString());
 
@@ -136,14 +136,14 @@ export const StockMovements: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Filter className="w-4 h-4 text-slate-500" />
             </div>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
-              className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
             >
               <option value="ALL">Todas as Operações</option>
               <option value="ENTRADA">Apenas Entradas</option>
@@ -320,14 +320,14 @@ export const StockMovements: React.FC = () => {
           </div>
 
           {uniqueOperators.length > 0 && (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <User className="w-4 h-4 text-slate-500" />
               </div>
               <select
                 value={filterOperator}
                 onChange={(e) => setFilterOperator(e.target.value)}
-                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
               >
                 <option value="ALL">Todos os Operadores</option>
                 {uniqueOperators.map(op => (
@@ -338,14 +338,14 @@ export const StockMovements: React.FC = () => {
           )}
 
           {uniqueCategories.length > 0 && (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <Filter className="w-4 h-4 text-slate-500" />
               </div>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none sm:max-w-[200px] truncate"
               >
                 <option value="ALL">Todas as Categorias</option>
                 {uniqueCategories.map(c => (
@@ -356,14 +356,14 @@ export const StockMovements: React.FC = () => {
           )}
 
           {uniquePaymentMethods.length > 0 && (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <CreditCard className="w-4 h-4 text-slate-500" />
               </div>
               <select
                 value={filterPaymentMethod}
                 onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none max-w-[200px] truncate"
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none sm:max-w-[200px] truncate"
               >
                 <option value="ALL">Todas as Formas</option>
                 {uniquePaymentMethods.map(p => (

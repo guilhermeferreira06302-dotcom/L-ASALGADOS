@@ -11,6 +11,7 @@ import { ReceitasDespesas } from './components/admin/ReceitasDespesas';
 import { ShiftManagement } from './components/admin/ShiftManagement';
 import { AccessManagement } from './components/admin/AccessManagement';
 import { SystemSettings } from './components/admin/SystemSettings';
+import { RushHoursWidget } from './components/admin/RushHoursWidget';
 import { EmployeePortal } from './components/employee/EmployeePortal';
 import { GlobalErrorBoundary } from './components/ErrorBoundary';
 import { Lock, Menu } from 'lucide-react';
@@ -150,6 +151,7 @@ const MainContent: React.FC = () => {
               {adminTab === 'ACESSOS' && <AccessManagement />}
               {adminTab === 'SHIFT' && <ShiftManagement isAdminView />}
               {adminTab === 'CONFIGURACOES' && <SystemSettings />}
+              {adminTab === 'DASHBOARD' && <RushHoursWidget />}
             </div>
           ) : isEmployeeLocked ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300 h-full min-h-[60vh]">

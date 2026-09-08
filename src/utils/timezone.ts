@@ -12,6 +12,11 @@ declare global {
 
 String.prototype.toBRTDateString = function() {
   if (!this.includes('T') && !this.includes('-')) return this.toString();
+  
+  if (this.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(this.toString())) {
+    return this.toString();
+  }
+
   try {
     const d = new Date(this.toString());
     if (isNaN(d.getTime())) return this.toString().split('T')[0];
