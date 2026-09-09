@@ -93,7 +93,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: 'Configurações de alerta ausentes ou desativadas no sistema.' };
     }
     try {
-      const url = `https://api.telegram.org/bot${systemSettings.telegram_bot_token.trim()}/sendMessage`;
+      const url = `/telegram-api/bot${systemSettings.telegram_bot_token.trim()}/sendMessage`;
       const res = await fetch(url, {
         method: 'POST',
         headers: {
