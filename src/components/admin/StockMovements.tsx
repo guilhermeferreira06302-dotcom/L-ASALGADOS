@@ -81,8 +81,9 @@ export const StockMovements: React.FC = () => {
     setCurrentPage(1);
   }
 
-  const currentDate = uniqueDates[currentPage - 1];
-  const paginatedMovements = filteredMovements.filter(m => m.date.toBRTDateString() === currentDate);
+  const safePage = Math.min(currentPage, Math.max(1, uniqueDates.length));
+  const currentDate = uniqueDates.length > 0 ? uniqueDates[safePage - 1] : '';
+  const paginatedMovements = filteredMovements.filter(m => currentDate && m.date.toBRTDateString() === currentDate);
 
   const formatDateTime = (isoString: string) => {
     const d = new Date(isoString);
@@ -487,7 +488,7 @@ export const StockMovements: React.FC = () => {
       {uniqueDates.length > 0 && (
         <div className="flex flex-col items-center justify-center mt-6 gap-3">
           <span className="text-sm text-slate-500">
-            Exibindo dados do dia: <strong className="text-slate-700">{currentDate.split('-').reverse().join('/')}</strong>
+            Exibindo dados do dia: <strong className="text-slate-700">{currentDate ? currentDate.split('-').reverse().join('/') : ''}</strong>
           </span>
           <div className="flex flex-wrap justify-center gap-2">
             {uniqueDates.map((dateStr, idx) => (
