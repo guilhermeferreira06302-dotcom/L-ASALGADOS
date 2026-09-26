@@ -35,19 +35,6 @@ const MainContent: React.FC = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [employeeAction, setEmployeeAction] = useState<'ENTRADA' | 'SAIDA' | null>(null);
 
-  const getCurrentBRTHour = () => {
-    const d = new Date();
-    const brt = new Date(d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    return brt.getHours();
-  };
-  const [currentHour, setCurrentHour] = useState(getCurrentBRTHour());
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentHour(getCurrentBRTHour());
-    }, 60000); // verify every minute
-    return () => clearInterval(interval);
-  }, []);
 
   // Reset portal override when user logs in or switches
   React.useEffect(() => {
@@ -89,8 +76,6 @@ const MainContent: React.FC = () => {
     }
   };
 
-  const isOperatingHours = currentHour >= 3 && currentHour < 23;
-  const isEmployeeLocked = activePortal === 'FUNCIONARIO' && !isOperatingHours;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans selection:bg-amber-500 selection:text-white">
@@ -152,25 +137,6 @@ const MainContent: React.FC = () => {
               {adminTab === 'SHIFT' && <ShiftManagement isAdminView />}
               {adminTab === 'CONFIGURACOES' && <SystemSettings />}
               {adminTab === 'DASHBOARD' && <RushHoursWidget />}
-            </div>
-          ) : isEmployeeLocked ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 animate-in fade-in duration-300 h-full min-h-[60vh]">
-              <div className="bg-white p-8 rounded-3xl border border-rose-200 shadow-xl max-w-md w-full text-center space-y-6 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-rose-500" />
-                <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-rose-100">
-                  <Lock className="w-8 h-8 text-rose-500" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-extrabold text-slate-900">Sistema Bloqueado</h2>
-                  <p className="text-sm text-slate-600 mt-2 font-medium">
-                    Fora do horário de expediente operacional.
-                  </p>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-700">
-                  <p>O sistema está disponível para operações e fechamento de caixa somente entre <strong className="text-slate-900 font-extrabold">03:00</strong> e <strong className="text-slate-900 font-extrabold">23:00</strong>.</p>
-                  <p className="mt-2 text-[11px] text-slate-500">Apenas o administrador possui acesso fora desse horário.</p>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="space-y-6">
