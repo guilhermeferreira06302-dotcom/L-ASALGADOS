@@ -123,7 +123,7 @@ export const StockInventory: React.FC = () => {
       if (ingDate < startDate || ingDate > endDate) return false;
     }
     return true;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
   const totalFilteredStockValue = filtered.reduce((acc, ing) => {
     let matchedProd: any;
@@ -561,7 +561,7 @@ export const StockInventory: React.FC = () => {
                 <div className="col-span-3">Contagem Física Real</div>
               </div>
 
-              {ingredients.filter(isStockActive).map(ing => (
+              {ingredients.filter(isStockActive).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(ing => (
                 <div key={ing.id} className="grid grid-cols-12 gap-2 items-center text-xs py-1.5 border-b border-slate-200/50">
                   <div className="col-span-6 font-bold text-slate-900 truncate">{ing.name}</div>
                   <div className="col-span-3 text-slate-700 font-semibold">{ing.currentStock} {ing.unit}</div>
