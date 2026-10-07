@@ -67,15 +67,15 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
     if (currentUser?.role !== 'ADMIN') return null;
 
     const allShiftsDates = [...shifts.map(s => s.openedAt.toBRTDateString())];
-    if (currentShift) {
-      allShiftsDates.push(currentShift.openedAt.toBRTDateString());
-    }
     const uniqueDates = Array.from(new Set(allShiftsDates)).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
     const safePage = currentPage > uniqueDates.length && uniqueDates.length > 0 ? 1 : Math.max(1, currentPage);
     const currentDate = uniqueDates.length > 0 ? uniqueDates[safePage - 1] : '';
-    const paginatedShifts = shifts.filter(s => currentDate && s.openedAt.toBRTDateString() === currentDate);
-    const showCurrentShift = currentShift && currentDate && currentShift.openedAt.toBRTDateString() === currentDate;
+    const paginatedShifts = shifts.filter(s => currentDate && s.openedAt.toBRTDateString() === currentDate).sort((a, b) => {
+       if (a.status === 'OPEN' && b.status !== 'OPEN') return -1;
+       if (b.status === 'OPEN' && a.status !== 'OPEN') return 1;
+       return new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime();
+    });
 
     return (
       <>
@@ -117,107 +117,65 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
-                {paginatedShifts.length === 0 && !showCurrentShift ? (
+                {paginatedShifts.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-8 text-center text-slate-500 text-xs">
                       Nenhum turno registrado.
                     </td>
                   </tr>
                 ) : null}
-                
-                {/* Mostra o turno atual primeiro, se existir e pertencer a esta página */}
-                {showCurrentShift && currentShift && (
-                  <tr className="bg-emerald-50/50">
-                    <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
-                      <UserIcon className="w-4 h-4 text-slate-400" />
-                      {currentShift.openedBy}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                        EM ANDAMENTO
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs">
-                      {new Date(currentShift.openedAt).toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-400">
-                      ---
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium text-slate-400">
-                      ---
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium">
-                      R$ {currentShift.initialCash.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium text-right text-slate-400">
-                      ---
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium text-right text-slate-400">
-                      ---
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium text-right text-slate-400">
-                      ---
-                    </td>
-                    <td className="py-3 px-4 text-right flex justify-end gap-1">
-                      <button 
-                        onClick={() => setShowCloseModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-lg shadow-sm transition mr-2"
-                        title="Encerrar este turno"
-                      >
-                        <Square className="w-3 h-3 fill-current" />
-                        Encerrar
-                      </button>
-                      <button 
-                        onClick={() => { setEditingShift(currentShift); setEditData(currentShift); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
-                        title="Editar turno"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => { if(window.confirm('Excluir este turno em andamento?')) cancelShift() }}
-                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
-                        title="Cancelar turno atual"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                )}
 
-                {paginatedShifts.map(shift => (
-                  <tr key={shift.id} className="hover:bg-slate-50 transition">
+                {paginatedShifts.map(shift => {
+                  const isOpen = shift.status === 'OPEN';
+                  return (
+                  <tr key={shift.id} className={`hover:bg-slate-50 transition ${isOpen ? 'bg-emerald-50/50' : ''}`}>
                     <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
                       <UserIcon className="w-4 h-4 text-slate-400" />
                       {shift.openedBy}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                        FECHADO
-                      </span>
+                      {isOpen ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                          EM ANDAMENTO
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                          FECHADO
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-xs">
                       {new Date(shift.openedAt).toLocaleString('pt-BR')}
                     </td>
-                    <td className="py-3 px-4 text-xs">
+                    <td className={`py-3 px-4 text-xs ${isOpen ? 'text-slate-400' : ''}`}>
                       {shift.closedAt ? new Date(shift.closedAt).toLocaleString('pt-BR') : '---'}
                     </td>
-                    <td className="py-3 px-4 text-xs font-medium">
+                    <td className={`py-3 px-4 text-xs font-medium ${isOpen ? 'text-slate-400' : ''}`}>
                       {calculateWorkedHours(shift.openedAt, shift.closedAt)}
                     </td>
                     <td className="py-3 px-4 text-xs font-medium">
                       R$ {shift.initialCash.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-xs font-bold text-right text-emerald-600">
-                      R$ {(shift.finalCashActual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className={`py-3 px-4 text-xs font-bold text-right ${isOpen ? 'text-slate-400' : 'text-emerald-600'}`}>
+                      {isOpen ? '---' : `R$ ${(shift.finalCashActual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </td>
-                    <td className="py-3 px-4 text-xs font-bold text-right text-blue-600">
-                      R$ {(shift.finalCardActual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className={`py-3 px-4 text-xs font-bold text-right ${isOpen ? 'text-slate-400' : 'text-blue-600'}`}>
+                      {isOpen ? '---' : `R$ ${(shift.finalCardActual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </td>
-                    <td className="py-3 px-4 text-xs font-extrabold text-right text-slate-900 bg-slate-50/50">
-                      R$ {((shift.finalCashActual || 0) + (shift.finalCardActual || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className={`py-3 px-4 text-xs font-extrabold text-right ${isOpen ? 'text-slate-400' : 'text-slate-900 bg-slate-50/50'}`}>
+                      {isOpen ? '---' : `R$ ${((shift.finalCashActual || 0) + (shift.finalCardActual || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </td>
                     <td className="py-3 px-4 text-right flex justify-end gap-1">
+                      {isOpen && currentShift?.id === shift.id && (
+                        <button 
+                          onClick={() => setShowCloseModal(true)}
+                          className="flex items-center gap-1.5 px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-lg shadow-sm transition mr-2"
+                          title="Encerrar este turno"
+                        >
+                          <Square className="w-3 h-3 fill-current" />
+                          Encerrar
+                        </button>
+                      )}
                       <button 
                         onClick={() => { setEditingShift(shift); setEditData(shift); }}
                         className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"
@@ -226,15 +184,16 @@ export const ShiftManagement: React.FC<{ isAdminView?: boolean, onNavigateBack?:
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => { if(window.confirm('Excluir histórico deste turno?')) cancelShift(shift.id) }}
+                        onClick={() => { if(window.confirm(isOpen ? 'Excluir este turno em andamento?' : 'Excluir histórico deste turno?')) cancelShift(shift.id) }}
                         className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
-                        title="Excluir histórico"
+                        title={isOpen ? "Cancelar turno atual" : "Excluir histórico"}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

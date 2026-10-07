@@ -263,7 +263,12 @@ export const FinancialAnalysis: React.FC = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Date-based Pagination Logic
-  const uniqueDates = Array.from(new Set<string>(allDisplayTransactions.map(t => t.date.toBRTDateString()))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const allDates = allDisplayTransactions.map(t => t.date.toBRTDateString());
+  const todayStr = new Date().toBRTISOString().toBRTDateString();
+  if (!allDates.includes(todayStr) && dateFilterMode === 'ALL') {
+    allDates.push(todayStr);
+  }
+  const uniqueDates = Array.from(new Set<string>(allDates)).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   
   // Se o total de dias mudar após um filtro, garantir que a página não fique fora do limite
   if (currentPage > uniqueDates.length && uniqueDates.length > 0) {
@@ -272,7 +277,9 @@ export const FinancialAnalysis: React.FC = () => {
 
   const safePage = Math.min(currentPage, Math.max(1, uniqueDates.length));
   const currentDate = uniqueDates.length > 0 ? uniqueDates[safePage - 1] : '';
-  const paginatedTransactions = allDisplayTransactions.filter(t => currentDate && t.date.toBRTDateString() === currentDate);
+  const paginatedTransactions = dateFilterMode === 'RANGE' 
+    ? allDisplayTransactions 
+    : allDisplayTransactions.filter(t => currentDate && t.date.toBRTDateString() === currentDate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -594,6 +601,9 @@ export const FinancialAnalysis: React.FC = () => {
                           setIsLoadingHistory(false);
                         }
                       }
+                      if (dateFilterMode === 'RANGE') {
+                        alert("REMOVENDO FILTRO DE BAIXO PARA ACEITAR A SOLITAÇÃO DESSE");
+                      }
                       setShowDateFilter(false);
                     }}
                     className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500 text-white font-extrabold rounded-xl shadow-md hover:bg-emerald-600 transition cursor-pointer disabled:opacity-70"
@@ -685,26 +695,26 @@ export const FinancialAnalysis: React.FC = () => {
       </div>
 
       {/* Pagination Controls */}
-      {uniqueDates.length > 0 && (
+      {uniqueDates.length > 0 && dateFilterMode === 'ALL' && (
         <div className="flex flex-col items-center justify-center mt-6 gap-3">
-          <span className="text-sm text-slate-500">
-            Exibindo dados do dia: <strong className="text-slate-700">{currentDate ? currentDate.split('-').reverse().join('/') : ''}</strong>
-          </span>
-          <div className="flex flex-wrap justify-center gap-2">
-            {uniqueDates.map((dateStr, idx) => (
-              <button
-                key={dateStr}
-                onClick={() => setCurrentPage(idx + 1)}
-                className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition cursor-pointer ${
-                  currentPage === idx + 1
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                }`}
-                title={dateStr.split('-').reverse().join('/')}
-              >
-                {idx + 1}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-slate-600">
+              Filtrar por data:
+            </span>
+            <select
+              value={safePage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {uniqueDates.map((dateStr, idx) => {
+                const [year, month, day] = dateStr.split('-');
+                return (
+                  <option key={dateStr} value={idx + 1}>
+                    {day}/{month}/{year}
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
       )}

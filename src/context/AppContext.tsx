@@ -81,8 +81,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [audits, setAudits] = useState<InventoryAudit[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const currentShift = React.useMemo(() => {
+    if (!currentUser) return null;
+    return shifts.find(s => s.status === 'OPEN' && s.openedBy === currentUser.name) || null;
+  }, [shifts, currentUser]);
   const [syncStatus, setSyncStatus] = useState<'SYNCED' | 'SYNCING' | 'ERROR'>('SYNCED');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [hasFullHistory, setHasFullHistory] = useState(false);
@@ -218,9 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (dbMovements) setStockMovements(dbMovements);
         if (dbAudits) setAudits(dbAudits);
         if (dbShifts) {
-          setShifts(dbShifts.filter((s: any) => s.status === 'CLOSED'));
-          const open = dbShifts.find((s: any) => s.status === 'OPEN');
-          if (open) setCurrentShift(open);
+          setShifts(dbShifts);
         }
         
         // Settings query can fail if no row exists (PGRST116), so we handle it from the Promise array result
@@ -294,18 +295,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             break;
           case 'shifts':
             if (eventType === 'INSERT' || eventType === 'UPDATE') {
-              if (newRec.status === 'OPEN') {
-                setCurrentShift(newRec as Shift);
-              } else {
-                setCurrentShift(prev => prev?.id === newRec.id ? null : prev);
-                setShifts(prev => {
-                  const filtered = prev.filter(s => s.id !== newRec.id);
-                  return [newRec as Shift, ...filtered];
-                });
-              }
+              setShifts(prev => {
+                const filtered = prev.filter(s => s.id !== newRec.id);
+                return [newRec as Shift, ...filtered];
+              });
             } else if (eventType === 'DELETE') {
               setShifts(prev => prev.filter(s => s.id !== oldRec.id));
-              setCurrentShift(prev => prev?.id === oldRec.id ? null : prev);
             }
             break;
         }
@@ -609,8 +604,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Atualizar ou Inserir (Upsert) o insumo no banco ANTES da movimentação
     // Isso garante que se for um produto-insumo que ainda não existe no DB, ele será criado,
     // evitando violação de chave estrangeira (foreign key) em stock_movements.
-    const dbIng = { ...updatedIng } as any;
-    delete dbIng.price; // Garante que campos extras não quebrem o upsert
+    const allowedKeys = ['id', 'name', 'unit', 'currentStock', 'minStock', 'maxStock', 'category', 'costPerUnit', 'supplier', 'operator', 'hasReceivedEntry', 'lastUpdated', 'created_at', 'createdAt'];
+    const dbIng: any = {};
+    for (const key of Object.keys(updatedIng)) {
+      if (allowedKeys.includes(key)) {
+        dbIng[key] = (updatedIng as any)[key];
+      }
+    }
 
     const { error: errorIng } = await supabase.from('ingredients').upsert(dbIng);
     if (errorIng) {
@@ -792,7 +792,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastUpdated: new Date().toBRTISOString(),
           operator: auditorName
         };
-        const { error } = await supabase.from('ingredients').upsert(updatedIng);
+        const allowedKeys = ['id', 'name', 'unit', 'currentStock', 'minStock', 'maxStock', 'category', 'costPerUnit', 'supplier', 'operator', 'hasReceivedEntry', 'lastUpdated', 'created_at', 'createdAt'];
+        const dbIng: any = {};
+        for (const key of Object.keys(updatedIng)) {
+          if (allowedKeys.includes(key)) {
+            dbIng[key] = (updatedIng as any)[key];
+          }
+        }
+
+        const { error } = await supabase.from('ingredients').upsert(dbIng);
         if (error) {
            console.error('Erro ao atualizar estoque na auditoria:', error);
            alert('Erro ao salvar auditoria no banco: ' + error.message);
@@ -1049,7 +1057,6 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
     setStockMovements([]);
     setCustomCategories([]);
     if (currentShift) supabase.from('shifts').delete().eq('id', currentShift.id).then();
-    setCurrentShift(null);
     setShifts([]);
   };
 
@@ -1067,7 +1074,7 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       alert('Erro ao abrir turno no banco: ' + error.message);
       throw error;
     }
-    setCurrentShift(newShift);
+    setShifts(prev => [newShift, ...prev]);
   };
 
   const closeShift = async (actualCash: number, actualCard: number, closedBy: string, notes?: string) => {
@@ -1099,31 +1106,20 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       alert('Erro ao fechar turno no banco: ' + error.message);
       throw error;
     }
-    setCurrentShift(null); // O turno atual deixa de existir e vira "fechado"
-    setShifts(prev => [closedShift, ...prev]);
+    setShifts(prev => [closedShift, ...prev.filter(s => s.id !== currentShift.id)]);
   };
 
   const cancelShift = async (shiftId?: string) => {
-    if (!shiftId || (currentShift && currentShift.id === shiftId)) {
-      if (currentShift) {
-        const { error } = await supabase.from('shifts').delete().eq('id', currentShift.id);
-        if (error) {
-          console.error('Erro ao cancelar turno atual:', error);
-          alert('Erro ao excluir turno atual do banco: ' + error.message);
-          throw error;
-        }
-      }
-      setCurrentShift(null);
+    const targetId = shiftId || currentShift?.id;
+    if (!targetId) return;
+
+    const { error } = await supabase.from('shifts').delete().eq('id', targetId);
+    if (!error) {
+      setShifts(prev => prev.filter(s => s.id !== targetId));
     } else {
-      if (shiftId) {
-        const { error } = await supabase.from('shifts').delete().eq('id', shiftId);
-        if (error) {
-          console.error('Erro ao cancelar turno:', error);
-          alert('Erro ao excluir turno do banco: ' + error.message);
-          throw error;
-        }
-      }
-      setShifts(prev => prev.filter(s => s.id !== shiftId));
+      console.error('Erro ao cancelar turno:', error);
+      alert('Erro ao excluir turno do banco: ' + error.message);
+      throw error;
     }
   };
 
@@ -1133,10 +1129,6 @@ Dê um relatório direto, prático, encorajador e profissional (em 3 ou 4 parág
       console.error('Erro ao atualizar turno:', error);
       alert('Erro ao atualizar turno no banco: ' + error.message);
       throw error;
-    }
-    
-    if (currentShift && currentShift.id === updatedShift.id) {
-      setCurrentShift(updatedShift);
     }
     
     setShifts(prev => prev.map(s => s.id === updatedShift.id ? updatedShift : s));
