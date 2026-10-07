@@ -103,10 +103,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Static Module Name for Employees */}
         {currentUser.role !== 'ADMIN' && (
-          <div className="p-4 border-b border-slate-200/80 bg-slate-50/40">
+          <div className="p-4 border-b border-slate-200/80 bg-slate-50/40 space-y-4">
             <div className="flex items-center gap-2 text-emerald-600 font-bold bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20">
               <ChefHat className="w-4 h-4" />
               <span className="text-sm">Terminal PDV</span>
+            </div>
+            
+            {/* Employee User Profile Card */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-full flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition cursor-pointer text-left shadow-sm"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
+                    <p className="text-[10px] text-slate-700 truncate">{currentUser.role === 'ADMIN' ? 'Administrador Principal' : 'Operador / PDV'}</p>
+                  </div>
+                </div>
+                {showUserMenu ? (
+                  <ChevronDown className="w-4 h-4 text-slate-700 flex-shrink-0" />
+                ) : (
+                  <ChevronUp className="w-4 h-4 text-slate-700 flex-shrink-0" />
+                )}
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-xl py-1.5 z-50 text-xs">
+                  <button
+                    onClick={logout}
+                    className="w-full text-left px-3.5 py-2 text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="font-bold">Sair da Conta</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -395,39 +427,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Employee User Profile Card */}
-          {activePortal !== 'ADMIN' && (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="w-full flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition cursor-pointer text-left shadow-sm"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-700 truncate">{currentUser.role === 'ADMIN' ? 'Administrador Principal' : 'Operador / PDV'}</p>
-                  </div>
-                </div>
-                {showUserMenu ? (
-                  <ChevronDown className="w-4 h-4 text-slate-700 flex-shrink-0" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-slate-700 flex-shrink-0" />
-                )}
-              </button>
 
-              {showUserMenu && (
-                <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-slate-300 rounded-xl shadow-xl py-1.5 z-50 text-xs">
-                  <button
-                    onClick={logout}
-                    className="w-full text-left px-3.5 py-2 text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span className="font-bold">Sair da Conta</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
       </aside>
